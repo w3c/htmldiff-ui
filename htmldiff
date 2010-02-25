@@ -1,0 +1,161 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+""" $Id$
+"""
+
+
+import cgi
+import sys
+import os
+import urlparse
+import urllib
+import httplib
+import surbl
+
+Page = """
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+<head><title>HTML Diff service</title>
+<link rel="stylesheet" href="http://www.w3.org/StyleSheets/base" />
+</head>
+<body>
+
+<p><a href="http://www.w3.org/"><img src="http://www.w3.org/Icons/w3c_home" alt="W3C"/></a> <a href="http://www.w3.org/2003/Editors">W3C Editors homepage</a></p>
+
+<h1>Create Diff between HTML pages</h1>
+"""
+Page2 = """
+<form method="GET">
+<p>Address of reference document: <input name="doc1" value="%s"/></p>
+<p>Address of new document: <input name="doc2" value="%s"/></p>
+<p><input type="submit" value="get Diff"/></p>
+</form>
+
+<address>
+script $Revision$ of $Date$<br />
+by <a href="http://www.w3.org/People/Dom/">Dominique Hazaël-Massieux</a><br />based on <a href="http://htmlwg.mn.aptest.com/viewcvs/viewcvs.cgi/htmldiff/htmldiff">Shane McCarron’ Perl script</a>
+</address>
+</body>
+</html>
+"""
+
+
+
+def serveRequest():
+    fields = cgi.FieldStorage()
+
+    if (not fields.has_key('doc1')) or (not fields.has_key('doc2')):
+        print "Content-Type: text/html;charset=utf-8"
+	print
+        print Page
+	print Page2 % ("","")
+    else:
+        checker = surbl.SurblChecker('/usr/local/share/surbl/two-level-tlds','/afs/w3.org/pub/WWW/Systems/Server/debian/generic/usr/local/etc/surbl.whitelist')
+        doc1 = fields['doc1'].value
+        doc2 = fields['doc2'].value
+	if "'" in doc1 or "'" in doc2:
+		print "Status: 403"
+		print "Content-Type: text/plain"
+		print
+		print "sorry, I can't handle addresses with ' in them"
+	elif doc1[:5] == 'file:' or len(urlparse.urlparse(doc1)[0])<2 or doc2[:5] == 'file:' or len(urlparse.urlparse(doc2)[0])<2:
+		print "Status: 403"
+		print "Content-Type: text/plain"
+		print
+		print "sorry, I decline to handle file: addresses"
+        elif checker.isMarkedAsSpam(doc1) or checker.isMarkedAsSpam(doc2):
+                print "Status: 403"
+                print "Content-Type: text/plain; charset=utf-8"
+                print
+                print "sorry, this URL matches a record known in SURBL. See http://www.surbl.org/"
+	else:
+                import http_auth
+                urlcomponents1 = urlparse.urlparse(doc1)
+                urlcomponents2 = urlparse.urlparse(doc2)
+		url_opener = http_auth.ProxyAuthURLopener()
+                # if same domain, we can use the same urlopener
+                # otherwise, we create a separate one
+                if urlcomponents2[1] == urlcomponents1[1]:
+                    url_opener2 = url_opener
+                else:
+                    url_opener2 = http_auth.ProxyAuthURLopener()
+                if fields.headers.has_key('If-Modified-Since'):
+                    url_opener.addheader("If-Modified-Since: %s" % (fields.headers["If-Modified-Since"]))
+                    url_opener2.addheader("If-Modified-Since: %s" % (fields.headers["If-Modified-Since"]))
+		if os.environ.has_key('REMOTE_ADDR') and os.environ['REMOTE_ADDR']:
+			url_opener.addheader('X_Forward_IP_Addr',os.environ['REMOTE_ADDR'])
+			url_opener2.addheader('X_Forward_IP_Addr',os.environ['REMOTE_ADDR'])
+		try:
+			refdoc = url_opener.open(doc1)
+		except IOError, (errno, strerror):
+			url_opener.error = "I/O error: %s %s" % (errno,strerror)
+			refdoc = None
+                except httplib.InvalidURL:
+                        url_opener.error = "Invalid URL submitted"
+                        refdoc = None
+		try:
+                        newdoc = url_opener2.open(doc2)
+		except IOError, (errno, strerror):
+			url_opener.error = "I/O error: %s %s" % (errno,strerror)
+			newdoc = None
+                except httplib.InvalidURL:
+                        url_opener.error = "Invalid URL submitted"
+                        newdoc = None
+		if refdoc and newdoc:
+                        import tidy
+                        from tempfile import NamedTemporaryFile
+                        tmp1 = NamedTemporaryFile('w')
+                        tmp2 = NamedTemporaryFile('w')
+                        tmp1.write(refdoc.read())
+                        tmp2.write(newdoc.read())
+			refheaders = refdoc.info()
+			newheaders = newdoc.info()
+                        if newheaders.has_key('Last-Modified'):
+                            print "Last-Modified: %s" % ( newheaders["Last-Modified"] )
+                        charset = ""
+                        contentType="text/html"
+                        if newheaders.has_key('Content-Type'):
+                            contentType = cgi.parse_header(newheaders["Content-Type"])
+                            if contentType[1].has_key('charset'):
+                                from string import lower
+                                charset = lower(contentType[1]['charset'])
+                            # @@@ should output charset=utf-8 when forceXML is set
+                            print "Content-Type: %s" % ( newheaders["Content-Type"] )
+                        else:
+                            print "Content-Type: text/html"
+                        # option for tidy
+                        options = dict(output_xhtml=1,tidy_mark=0)
+                        if charset == "iso-8859-1":
+                            options["char_encoding"]='latin1'
+                        else:
+                            options["char_encoding"]='utf8'
+                        
+                        if newheaders.has_key("Expires"):
+                            print "Expires: %s" % (newheaders['Expires'] )
+			print
+			command=["/usr/local/bin/htmldiff",tmp1.name,tmp2.name]
+                        from subprocess import Popen, PIPE
+                        p = Popen(command,stdin=None, stdout=PIPE, stderr=PIPE)
+                        sys.stdout.flush()
+                        sys.stderr.flush()
+                        (out,err) = p.communicate()
+                        if err:
+                            print Page
+                            print "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p>"
+                            print "<pre>%s</pre>" % (cgi.escape(err))
+                            print Page2 % (cgi.escape(doc1),cgi.escape(doc2))
+                        else:
+                            print tidy.parseString(out, **options)
+
+		else:
+			print "Content-Type: text/html;charset=utf-8"
+			print
+			print Page
+			print "<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a> or <a href='%s'>%s</a>.</p>" % (cgi.escape(url_opener.error),cgi.escape(doc1),cgi.escape(doc1),cgi.escape(doc2),cgi.escape(doc2))
+			print Page2 % (cgi.escape(doc1),cgi.escape(doc2))
+
+
+if __name__ == '__main__':
+    if os.environ.has_key('SCRIPT_NAME'):
+        serveRequest()
+
