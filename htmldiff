@@ -124,7 +124,7 @@ def serveRequest():
                         else:
                             print "Content-Type: text/html"
                         # option for tidy
-                        options = dict(output_xhtml=1,tidy_mark=0)
+                        options = dict(output_xhtml=1,tidy_mark=0,show_warnings=0,quiet=1)
                         if charset == "iso-8859-1":
                             options["char_encoding"]='latin1'
                         else:
