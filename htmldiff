@@ -145,7 +145,10 @@ def serveRequest():
                             print "<pre>%s</pre>" % (cgi.escape(err))
                             print Page2 % (cgi.escape(doc1),cgi.escape(doc2))
                         else:
-                            print tidy.parseString(out, **options)
+                            output = tidy.parseString(out, **options)
+                            if not output == "\n":
+                                output = out
+                            print output
 
 		else:
 			print "Content-Type: text/html;charset=utf-8"
