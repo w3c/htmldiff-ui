@@ -119,10 +119,8 @@ def serveRequest():
                             if contentType[1].has_key('charset'):
                                 from string import lower
                                 charset = lower(contentType[1]['charset'])
-                            # @@@ should output charset=utf-8 when forceXML is set
-                            print "Content-Type: %s" % ( newheaders["Content-Type"] )
-                        else:
-                            print "Content-Type: text/html"
+
+                        print "Content-Type: text/html"
                         # option for tidy
                         options = dict(output_xhtml=1,tidy_mark=0,show_warnings=0,quiet=1)
                         if charset == "iso-8859-1":
