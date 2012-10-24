@@ -108,6 +108,8 @@ def serveRequest():
                         tmp2 = NamedTemporaryFile('w')
                         tmp1.write(refdoc.read())
                         tmp2.write(newdoc.read())
+                        tmp1.flush()
+                        tmp2.flush()
 			refheaders = refdoc.info()
 			newheaders = newdoc.info()
                         if newheaders.has_key('Last-Modified'):
