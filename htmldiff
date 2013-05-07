@@ -100,6 +100,13 @@ def serveRequest():
                 doc1 = None
         else:
             doc1 = fields['doc1'].value
+        if (not doc1):
+            print "Content-Type: text/html;charset=utf-8"
+            print
+            print Page
+            print Page2 % ("","")
+            sys.exit()
+
         checkInputUrl(doc1)
         urlcomponents1 = urlparse.urlparse(doc1)
         urlcomponents2 = urlparse.urlparse(doc2)
