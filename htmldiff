@@ -31,8 +31,6 @@ Page2 = """
 <p><input type="submit" value="get Diff"/></p>
 </form>
 
-<address>
-script $Revision$ of $Date$<br />
 <p><strong>Tip</strong>: if the document uses the W3C convention on linking to its previous version, you can specify only the address of the new document — the previous link will be automatically detected.</p>
 <address>
 script $Revision$ of $Date$<br />
