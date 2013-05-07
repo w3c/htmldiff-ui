@@ -30,6 +30,9 @@ Page2 = """
 <p>Address of new document: <input name="doc2" value="%s"/></p>
 <p><input type="submit" value="get Diff"/></p>
 </form>
+
+<address>
+script $Revision$ of $Date$<br />
 <p><strong>Tip</strong>: if the document uses the W3C convention on linking to its previous version, you can specify only the address of the new document — the previous link will be automatically detected.</p>
 <address>
 script $Revision$ of $Date$<br />
@@ -134,7 +137,33 @@ def serveRequest():
             tmp1 = NamedTemporaryFile('w')
             tmp2 = NamedTemporaryFile('w')
             tmp1.write(refdoc.read())
-            newtidy = 
+            newtidy = tidy.parseString(newdoc.read(), **options)
+            tmp2.write(newtidy.__str__())
+            tmp1.flush()
+            tmp2.flush()
+            refheaders = refdoc.info()
+            if newheaders.has_key('Last-Modified'):
+                print "Last-Modified: %s" % ( newheaders["Last-Modified"] )
+                charset = ""
+                contentType="text/html"
+                        
+            if newheaders.has_key("Expires"):
+                print "Expires: %s" % (newheaders['Expires'] )
+            print
+            command=["/usr/local/bin/htmldiff",tmp1.name,tmp2.name]
+            from subprocess import Popen, PIPE
+            p = Popen(command,stdin=None, stdout=PIPE, stderr=PIPE)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            (out,err) = p.communicate()
+            if err:
+                print Page
+                print "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p>"
+                print "<pre>%s</pre>" % (cgi.escape(err))
+                print Page2 % (cgi.escape(doc1),cgi.escape(doc2))
+            else:
+                output = tidy.parseString(out, **options)
+                if not output == "\n":
                     output = out
                     print output
 
