@@ -94,7 +94,10 @@ def serveRequest():
             import re
             soup = BeautifulSoup(newdoc.read())
             newdoc.seek(0)
-            doc1 = soup.find(text=re.compile("Previous Version",re.IGNORECASE)).findNext(name="a", attrs={"href":True})["href"]
+            try:
+                doc1 = soup.find(text=re.compile("Previous Version",re.IGNORECASE)).findNext(name="a", attrs={"href":True})["href"]
+            except:
+                doc1 = None
         else:
             doc1 = fields['doc1'].value
         checkInputUrl(doc1)
