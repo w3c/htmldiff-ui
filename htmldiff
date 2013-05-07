@@ -116,19 +116,6 @@ def serveRequest():
             url_opener.error = "Invalid URL submitted"
             refdoc = None
         if refdoc and newdoc:
-            import tidy
-            from tempfile import NamedTemporaryFile
-            tmp1 = NamedTemporaryFile('w')
-            tmp2 = NamedTemporaryFile('w')
-            tmp1.write(refdoc.read())
-            tmp2.write(newdoc.read())
-            tmp1.flush()
-            tmp2.flush()
-            refheaders = refdoc.info()
-            if newheaders.has_key('Last-Modified'):
-                print "Last-Modified: %s" % ( newheaders["Last-Modified"] )
-                charset = ""
-                contentType="text/html"
             if newheaders.has_key('Content-Type'):
                 contentType = cgi.parse_header(newheaders["Content-Type"])
                 if contentType[1].has_key('charset'):
@@ -141,6 +128,21 @@ def serveRequest():
                         options["char_encoding"]='latin1'
                     else:
                         options["char_encoding"]='utf8'
+
+            import tidy
+            from tempfile import NamedTemporaryFile
+            tmp1 = NamedTemporaryFile('w')
+            tmp2 = NamedTemporaryFile('w')
+            tmp1.write(refdoc.read())
+            newtidy = tidy.parseString(newdoc.read(), **options)
+            tmp2.write(newtidy.__str__())
+            tmp1.flush()
+            tmp2.flush()
+            refheaders = refdoc.info()
+            if newheaders.has_key('Last-Modified'):
+                print "Last-Modified: %s" % ( newheaders["Last-Modified"] )
+                charset = ""
+                contentType="text/html"
                         
             if newheaders.has_key("Expires"):
                 print "Expires: %s" % (newheaders['Expires'] )
