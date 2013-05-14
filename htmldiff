@@ -145,8 +145,12 @@ def serveRequest():
             tmp1 = NamedTemporaryFile('w')
             tmp2 = NamedTemporaryFile('w')
             tmp1.write(refdoc.read())
-            newtidy = tidy.parseString(newdoc.read(), **options)
-            tmp2.write(newtidy.__str__())
+            src = newdoc.read()
+            newtidy = tidy.parseString(src, **options)
+            if newtidy.__str__():
+                tmp2.write(newtidy.__str__())
+            else:
+                tmp2.write(src)
             tmp1.flush()
             tmp2.flush()
             refheaders = refdoc.info()
