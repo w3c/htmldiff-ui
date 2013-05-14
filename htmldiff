@@ -146,11 +146,25 @@ def serveRequest():
             tmp2 = NamedTemporaryFile('w')
             tmp1.write(refdoc.read())
             src = newdoc.read()
+            html5doctype = re.compile("<!doctype\s+html\s*>", re.IGNORECASE)
+            html5 = html5doctype.search(src)
+            if html5:
+                html5_tidy_options = {"add_xml_space": "no",
+                                      "output_xhtml": "yes",
+                                      "tidy_mark": "no",
+                                      "new_blocklevel_tags": '"article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary"',
+                                      "new_inline_tags": '"video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source"',
+                                      "break_before_br": "no",
+                                      "vertical_space": "no",
+                                      "enclose_text": "no",
+                                      "numeric_entities": "yes",
+                                      "wrap": "1000",
+                                      "wrap_attributes": "no",
+                                      "drop_empty_paras": "no"
+                                      }
+                options = dict(options.items() + html5_tidy_options.items())
             newtidy = tidy.parseString(src, **options)
-            if newtidy.__str__():
-                tmp2.write(newtidy.__str__())
-            else:
-                tmp2.write(src)
+            tmp2.write(newtidy.__str__())
             tmp1.flush()
             tmp2.flush()
             refheaders = refdoc.info()
