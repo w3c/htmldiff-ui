@@ -76,6 +76,7 @@ def serveRequest():
         doc2 = fields['doc2'].value
         checkInputUrl(doc2)
         import http_auth
+        import re
         url_opener2 = http_auth.ProxyAuthURLopener()
         setupRequest(url_opener2, fields.headers)
         try:
@@ -91,7 +92,7 @@ def serveRequest():
             newdoc = None
         if (not fields.has_key('doc1')):
             from BeautifulSoup import BeautifulSoup
-            import re
+
             soup = BeautifulSoup(newdoc.read())
             newdoc.seek(0)
             try:
