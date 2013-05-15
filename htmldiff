@@ -83,6 +83,9 @@ def serveRequest():
             import StringIO
             urldoc = url_opener2.open(doc2)
             if not urldoc: # 401?
+                print
+                print Page
+                print Page2 % ("","")
                 sys.exit()
             newheaders = urldoc.info()
             newdoc = StringIO.StringIO(urldoc.read())
