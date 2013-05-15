@@ -82,6 +82,8 @@ def serveRequest():
         try:
             import StringIO
             urldoc = url_opener2.open(doc2)
+            if not urldoc: # 401?
+                sys.exit()
             newheaders = urldoc.info()
             newdoc = StringIO.StringIO(urldoc.read())
         except IOError, (errno, strerror):
