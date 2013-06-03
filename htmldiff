@@ -170,7 +170,10 @@ def serveRequest():
                                       }
                 options = dict(options.items() + html5_tidy_options.items())
             newtidy = tidy.parseString(src, **options)
-            tmp2.write(newtidy.__str__())
+            if len(newtidy.errors) > 0:
+                tmp2.write(src)
+            else:
+                tmp2.write(newtidy.__str__())
             tmp1.flush()
             tmp2.flush()
             refheaders = refdoc.info()
