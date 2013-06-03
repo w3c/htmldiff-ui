@@ -158,7 +158,7 @@ def serveRequest():
                 html5_tidy_options = {"add_xml_space": "no",
                                       "output_xhtml": "yes",
                                       "tidy_mark": "no",
-                                      "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary',
+                                      "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,math,semantics,mrow,mfenced,mtable,mtr,mtd,mi,mn,msub,mo,mfrac,munderover,mtext',
                                       "new_inline_tags": 'video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source',
                                       "break_before_br": "no",
                                       "vertical_space": "no",
@@ -171,6 +171,7 @@ def serveRequest():
                 options = dict(options.items() + html5_tidy_options.items())
             newtidy = tidy.parseString(src, **options)
             if len(newtidy.errors) > 0:
+                sys.stderr.write(newtidy.errors.__str__())
                 tmp2.write(src)
             else:
                 tmp2.write(newtidy.__str__())
