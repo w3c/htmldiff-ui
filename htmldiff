@@ -133,14 +133,14 @@ def serveRequest():
             url_opener.error = "Invalid URL submitted"
             refdoc = None
         if refdoc and newdoc:
+            # option for tidy
+            options = dict(output_xhtml=1,tidy_mark=0,show_warnings=0,quiet=1)
             if newheaders.has_key('Content-Type'):
                 contentType = cgi.parse_header(newheaders["Content-Type"])
                 if contentType[1].has_key('charset'):
                     from string import lower
                     charset = lower(contentType[1]['charset'])
                     print "Content-Type: text/html"
-                    # option for tidy
-                    options = dict(output_xhtml=1,tidy_mark=0,show_warnings=0,quiet=1)
                     if charset == "iso-8859-1":
                         options["char_encoding"]='latin1'
                     else:
