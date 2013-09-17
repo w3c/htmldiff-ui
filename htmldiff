@@ -134,7 +134,7 @@ def serveRequest():
             refdoc = None
         if refdoc and newdoc:
             # option for tidy
-            options = dict(output_xhtml=1,tidy_mark=0,show_warnings=0,quiet=1)
+            options = dict(output_xhtml=1,tidy_mark=0,show_warnings=0,quiet=1,char_encoding='utf8')
             print "Content-Type: text/html"
             if newheaders.has_key('Content-Type'):
                 contentType = cgi.parse_header(newheaders["Content-Type"])
@@ -143,8 +143,6 @@ def serveRequest():
                     charset = lower(contentType[1]['charset'])
                     if charset == "iso-8859-1":
                         options["char_encoding"]='latin1'
-                    else:
-                        options["char_encoding"]='utf8'
 
             import tidy
             from tempfile import NamedTemporaryFile
