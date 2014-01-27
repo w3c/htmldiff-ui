@@ -86,6 +86,8 @@ def mirrorURL(url, opener):
         opener.error = "I/O error: %s %s" % (error.errno, error.strerror)
     except httplib.InvalidURL:
         opener.error = "Invalid URL submitted"
+    except AttributeError:  # ProxyAuthURLopener returned None.
+        pass                # There's already an error set.
     else:
         atexit.register(os.unlink, filename)
         return (open(filename), headers)
