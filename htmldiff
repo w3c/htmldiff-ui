@@ -81,7 +81,7 @@ def setupRequest(source_headers):
 
 def mirrorURL(url, opener):
     try:
-        filename, headers = opener.open(url)
+        filename, headers = opener.retrieve(url)
     except IOError, error:
         opener.error = "I/O error: %s %s" % (error.errno, error.strerror)
     except httplib.InvalidURL:
