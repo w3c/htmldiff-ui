@@ -195,7 +195,7 @@ def serveRequest():
     if err:
         error = "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p><pre>%s</pre>" % (cgi.escape(err),)
         showPage(esc1, esc2, error)
-    elif tidy.parseString(out, **options).strip():
+    elif str(tidy.parseString(out, **options)).strip():
         print out
             
 if __name__ == '__main__':
