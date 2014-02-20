@@ -142,13 +142,16 @@ def serveRequest():
     refdoc, refheaders = mirrorURL(doc1, url_opener)
     if not (refdoc and newdoc):
         http_error = ""
+        url = ""
         if not refdoc:
             http_error = url_opener.error
+            url = esc1
         else:
             http_error = url_opener2.error
+            url = esc2
         if re.match("^[1234][0-9][0-9] ", http_error):
             print "Status: %s" %(http_error)
-        error="<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a> or <a href='%s'>%s</a>.</p>" % (cgi.escape(http_error), esc1, esc1, esc2, esc2)
+        error="<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a>.</p>" % (cgi.escape(http_error), url, url)
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
 
     # option for tidy
