@@ -13,7 +13,6 @@ import surbl
 import sys
 import tempfile
 import tidy
-import urllib
 import urlparse
 
 from subprocess import Popen, PIPE
@@ -142,7 +141,15 @@ def serveRequest():
 
     refdoc, refheaders = mirrorURL(doc1, url_opener)
     if not (refdoc and newdoc):
-        error="<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a> or <a href='%s'>%s</a>.</p>" % (cgi.escape(url_opener.error), esc1, esc1, esc2, esc2)
+        http_error = ""
+        if not refdoc:
+            http_error = url_opener.error
+        else:
+            http_error = url_opener2.error
+        if re.match("^[1234][0-9][0-9] ", http_error):
+            print http_error
+            print
+        error="<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a> or <a href='%s'>%s</a>.</p>" % (cgi.escape(error), esc1, esc1, esc2, esc2)
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
 
     # option for tidy
