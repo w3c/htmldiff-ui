@@ -147,7 +147,7 @@ def serveRequest():
         else:
             http_error = url_opener2.error
         if re.match("^[1234][0-9][0-9] ", http_error):
-            print http_error
+            print "Status: %s" %(http_error)
             print
         error="<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a> or <a href='%s'>%s</a>.</p>" % (cgi.escape(error), esc1, esc1, esc2, esc2)
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
