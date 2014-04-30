@@ -164,9 +164,9 @@ def serveRequest():
             if charset == "iso-8859-1":
                 options["char_encoding"]='latin1'
 
-    html5 = re.search(r"<!doctype\s+html\s*>", refdoc.read(4096),
+    html5 = re.search(r"<!doctype\s+html\s*>", newdoc.read(4096),
                       re.IGNORECASE)
-    refdoc.seek(0)
+    newdoc.seek(0)
     if html5:
         options.update({"add_xml_space": "no",
                         "output_xhtml": "yes",
