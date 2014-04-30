@@ -123,6 +123,8 @@ def mirrorURL(url, opener):
         file,errors = tidyFile(file)
         if errors.length == 0:
             return (file, headers)
+        else:
+            opener.error = "Tidy errors: %s" (str(errors))
     return (None, {})
 
 def showPage(url1='', url2='', error_html='', **headers):
