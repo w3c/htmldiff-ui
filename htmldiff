@@ -86,7 +86,7 @@ def tidyFile(file):
     file.seek(0)
     if html5:
         options.update({"add_xml_space": "no",
-                        "output_xhtml": "yes",
+                        "output_xhtml": "no",
                         "tidy_mark": "no",
                         "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,math,semantics,mrow,mfenced,mtable,mtr,mtd,mi,mn,msub,mo,mfrac,munderover,mtext,svg,g,image,rect,text,desc,line',
                         "new_inline_tags": 'video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source',
@@ -99,6 +99,8 @@ def tidyFile(file):
                         "drop_empty_paras": "no"
                         })
     newtidy = tidy.parseString(file.read(), **options)
+    if len(newtidy.errors) > 0:
+        sys.stderr.write(str(newtidy.errors))
     file.close()
     file = tempfile.NamedTemporaryFile(
         mode='w+', prefix='htmldiff-', suffix='.html')
@@ -120,6 +122,12 @@ def mirrorURL(url, opener):
     else:
         atexit.register(os.unlink, filename)
         file = open(filename)
+        if headers.has_key("content-encoding") and headers["content-encoding"] == "gzip":
+            import gzip
+            from StringIO import StringIO
+            data = StringIO(file.read())
+            file.close()
+            file = gzip.GzipFile(fileobj=data)
         file,errors = tidyFile(file)
         if len(errors) == 0:
             return (file, headers)
