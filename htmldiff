@@ -155,7 +155,7 @@ def serveRequest():
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
 
     # option for tidy
-    options = dict(output_xhtml=1,tidy_mark=0,show_warnings=0,quiet=1,char_encoding='utf8')
+    options = dict(tidy_mark=0,show_warnings=0,quiet=1,char_encoding='utf8')
     print "Content-Type: text/html"
     if newheaders.has_key('Content-Type'):
         contentType = cgi.parse_header(newheaders["Content-Type"])
@@ -184,6 +184,7 @@ def serveRequest():
     newtidy = tidy.parseString(newdoc.read(), **options)
     if len(newtidy.errors) > 0:
         sys.stderr.write(str(newtidy.errors))
+        showPage(esc1, esc2, str(newtidy.errors))
     else:
         newdoc.close()
         newdoc = tempfile.NamedTemporaryFile(
@@ -208,7 +209,6 @@ def serveRequest():
         showPage(esc1, esc2, error)
     elif str(tidy.parseString(out, **options)).strip():
         print out
-            
 if __name__ == '__main__':
     if os.environ.has_key('SCRIPT_NAME'):
         serveRequest()
