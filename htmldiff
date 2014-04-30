@@ -171,7 +171,7 @@ def serveRequest():
         options.update({"add_xml_space": "no",
                         "output_xhtml": "yes",
                         "tidy_mark": "no",
-                        "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,math,semantics,mrow,mfenced,mtable,mtr,mtd,mi,mn,msub,mo,mfrac,munderover,mtext',
+                        "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,math,semantics,mrow,mfenced,mtable,mtr,mtd,mi,mn,msub,mo,mfrac,munderover,mtext,svg,g,image,rect,text',
                         "new_inline_tags": 'video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source',
                         "break_before_br": "no",
                         "vertical_space": "no",
