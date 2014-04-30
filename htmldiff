@@ -184,7 +184,7 @@ def serveRequest():
     newtidy = tidy.parseString(newdoc.read(), **options)
     if len(newtidy.errors) > 0:
         sys.stderr.write(str(newtidy.errors))
-        error = "<p style='color:#FF0000'>An error occured when running <code>tidy</code> on the documents:</p><pre>%s</pre>" % (cgi.escape(str(newtidy.errors)))
+        error = "<p style='color:#FF0000'>An error occured when running <code>tidy</code> on the documents:</p><pre>%s</pre><p>Tidy options were set to: </p><pre>%s</pre>" % (cgi.escape(str(newtidy.errors)), cgi.escape(str(options)))
         showPage(esc1, esc2, error)
     else:
         newdoc.close()
