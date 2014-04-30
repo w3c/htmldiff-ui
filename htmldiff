@@ -184,8 +184,8 @@ def serveRequest():
     newtidy = tidy.parseString(newdoc.read(), **options)
     if len(newtidy.errors) > 0:
         sys.stderr.write(str(newtidy.errors))
-        error = "<p style='color:#FF0000'>An error occured when running <code>tidy</code> on the documents:</p><pre>%s</pre>" % (cgi.escape(str(newtidy.errors))))
-        showPage(esc1, esc2, cgi.escape()
+        error = "<p style='color:#FF0000'>An error occured when running <code>tidy</code> on the documents:</p><pre>%s</pre>" % (cgi.escape(str(newtidy.errors)))
+        showPage(esc1, esc2, error)
     else:
         newdoc.close()
         newdoc = tempfile.NamedTemporaryFile(
