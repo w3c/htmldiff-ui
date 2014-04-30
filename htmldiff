@@ -78,6 +78,36 @@ def setupRequest(source_headers):
     copyHeader(opener.addheader, os.environ, 'REMOTE_ADDR', 'X_Forward_IP_Addr')
     return opener
 
+def tidyHTML(file):
+    # option for tidy
+    options = dict(tidy_mark=0,show_warnings=0,quiet=1,char_encoding='utf8')
+    html5 = re.search(r"<!doctype\s+html\s*>", file.read(4096),
+                      re.IGNORECASE)
+    file.seek(0)
+    if html5:
+        options.update({"add_xml_space": "no",
+                        "output_xhtml": "yes",
+                        "tidy_mark": "no",
+                        "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,math,semantics,mrow,mfenced,mtable,mtr,mtd,mi,mn,msub,mo,mfrac,munderover,mtext,svg,g,image,rect,text,desc,line',
+                        "new_inline_tags": 'video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source',
+                            "break_before_br": "no",
+                        "vertical_space": "no",
+                        "enclose_text": "no",
+                        "numeric_entities": "yes",
+                        "wrap": "1000",
+                        "wrap_attributes": "no",
+                        "drop_empty_paras": "no"
+                        })
+    newtidy = tidy.parseString(file.read(), **options)
+    file.close()
+    file = tempfile.NamedTemporaryFile(
+        mode='w+', prefix='htmldiff-', suffix='.html')
+    atexit.register(file.close)
+    file.write(str(newtidy))
+    file.flush()
+    file.seek(0)
+    return (file, newtidy.errors)
+
 def mirrorURL(url, opener):
     try:
         filename, headers = opener.retrieve(url)
@@ -89,7 +119,10 @@ def mirrorURL(url, opener):
         pass                # There's already an error set.
     else:
         atexit.register(os.unlink, filename)
-        return (open(filename), headers)
+        file = open(filename)
+        file,errors = tidyFile(file)
+        if errors.length == 0:
+            return (file, headers)
     return (None, {})
 
 def showPage(url1='', url2='', error_html='', **headers):
@@ -154,8 +187,6 @@ def serveRequest():
         error="<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a>.</p>" % (cgi.escape(http_error), url, url)
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
 
-    # option for tidy
-    options = dict(tidy_mark=0,show_warnings=0,quiet=1,char_encoding='utf8')
     print "Content-Type: text/html"
     if newheaders.has_key('Content-Type'):
         contentType = cgi.parse_header(newheaders["Content-Type"])
@@ -164,36 +195,10 @@ def serveRequest():
             if charset == "iso-8859-1":
                 options["char_encoding"]='latin1'
 
-    html5 = re.search(r"<!doctype\s+html\s*>", newdoc.read(4096),
-                      re.IGNORECASE)
-    newdoc.seek(0)
-    if html5:
-        options.update({"add_xml_space": "no",
-                        "output_xhtml": "yes",
-                        "tidy_mark": "no",
-                        "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,math,semantics,mrow,mfenced,mtable,mtr,mtd,mi,mn,msub,mo,mfrac,munderover,mtext,svg,g,image,rect,text,desc,line',
-                        "new_inline_tags": 'video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source',
-                        "break_before_br": "no",
-                        "vertical_space": "no",
-                        "enclose_text": "no",
-                        "numeric_entities": "yes",
-                        "wrap": "1000",
-                        "wrap_attributes": "no",
-                        "drop_empty_paras": "no"
-                        })
-    newtidy = tidy.parseString(newdoc.read(), **options)
     if len(newtidy.errors) > 0:
         sys.stderr.write(str(newtidy.errors))
         error = "<p style='color:#FF0000'>An error occured when running <code>tidy</code> on the documents:</p><pre>%s</pre><p>Tidy options were set to: </p><pre>%s</pre>" % (cgi.escape(str(newtidy.errors)), cgi.escape(str(options)))
         showPage(esc1, esc2, error)
-    else:
-        newdoc.close()
-        newdoc = tempfile.NamedTemporaryFile(
-            mode='w+', prefix='htmldiff-', suffix='.html')
-        atexit.register(newdoc.close)
-        newdoc.write(str(newtidy))
-        newdoc.flush()
-    newdoc.seek(0)
 
     for proxy_header in ('Last-Modified', 'Expires'):
         if copyHeader(sys.stdout.write, newheaders, proxy_header):
