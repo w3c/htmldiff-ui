@@ -102,6 +102,7 @@ def tidyFile(file):
     newtidy = tidy.parseString(file.read(), **options)
     if len(newtidy.errors) > 0:
         if not html5:
+            file.seek(0)
             options.update(html5_options)
             newtidy = tidy.parseString(file.read(), **options)
     file.close()
