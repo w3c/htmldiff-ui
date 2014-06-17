@@ -84,23 +84,26 @@ def tidyFile(file):
     html5 = re.search(r"<!doctype\s+html\s*>", file.read(4096),
                       re.IGNORECASE)
     file.seek(0)
+    html5_options = {"add_xml_space": "no",
+                     "output_xhtml": "no",
+                     "tidy_mark": "no",
+                     "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,math,semantics,mrow,mfenced,mtable,mtr,mtd,mi,mn,msub,mo,mfrac,munderover,mtext,svg,g,image,rect,text,desc,line,path,polygon,ellipse,tspan,defs,feoffset,fecolormatrix,filter,fegaussianblur,feblend',
+                     "new_inline_tags": 'video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source',
+                     "break_before_br": "no",
+                     "vertical_space": "no",
+                     "enclose_text": "no",
+                     "numeric_entities": "yes",
+                     "wrap": "1000",
+                     "wrap_attributes": "no",
+                     "drop_empty_paras": "no"
+                     }
     if html5:
-        options.update({"add_xml_space": "no",
-                        "output_xhtml": "no",
-                        "tidy_mark": "no",
-                        "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,math,semantics,mrow,mfenced,mtable,mtr,mtd,mi,mn,msub,mo,mfrac,munderover,mtext,svg,g,image,rect,text,desc,line,path,polygon,ellipse,tspan,defs,filter,feoffset,fecolormatrix,feblend,fegaussianblur',
-                        "new_inline_tags": 'video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source',
-                            "break_before_br": "no",
-                        "vertical_space": "no",
-                        "enclose_text": "no",
-                        "numeric_entities": "yes",
-                        "wrap": "1000",
-                        "wrap_attributes": "no",
-                        "drop_empty_paras": "no"
-                        })
+        options.update(html5_options)
     newtidy = tidy.parseString(file.read(), **options)
     if len(newtidy.errors) > 0:
-        sys.stderr.write(str(newtidy.errors))
+        if not html5:
+            options.update(html5_options)
+            newtidy = tidy.parseString(file.read(), **options)
     file.close()
     file = tempfile.NamedTemporaryFile(
         mode='w+', prefix='htmldiff-', suffix='.html')
