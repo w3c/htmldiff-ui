@@ -175,8 +175,8 @@ def serveRequest():
         showPage(Content_Type=CONTENT_TYPE)
 
     checkInputUrl(doc1)
-    esc1 = cgi.escape(doc1)
-    esc2 = cgi.escape(doc2)
+    esc1 = cgi.escape(doc1, True)
+    esc2 = cgi.escape(doc2, True)
     urlcomponents1 = urlparse.urlparse(doc1)
     urlcomponents2 = urlparse.urlparse(doc2)
     # if same domain, we can use the same urlopener
