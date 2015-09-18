@@ -114,6 +114,9 @@ def tidyFile(file):
     file.seek(0)
     return (file, newtidy.errors)
 
+def matchPredecessorRel(rel):
+    return rel and "predecessor-version" in rel.lower().split(" ")
+
 def mirrorURL(url, opener):
     try:
         filename, headers = opener.retrieve(url)
@@ -168,7 +171,10 @@ def serveRequest():
         try:
             doc1 = soup.find(text=re.compile("Previous Version",re.IGNORECASE)).findNext(name="a", attrs={"href":True})["href"]
         except:
-            doc1 = None
+            try:
+                doc1 = soup.find(name=["a", "link"], attrs={"href":True, rel:matchPredecessorRel})["href"]
+            except:
+                doc1 = None
     else:
         doc1 = None
     if (not doc1):
