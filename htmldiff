@@ -33,8 +33,8 @@ Page = """
 """
 Page2 = """
 <form method="GET">
-<p>Address of reference document: <input name="doc1" type="url" value="%s" style="width:100%"/></p>
-<p>Address of new document: <input name="doc2" value="%s"  style="width:100%"/></p>
+<p>Address of reference document: <input name="doc1" type="url" value="%s" style="width:100%%"/></p>
+<p>Address of new document: <input name="doc2" value="%s"  style="width:100%%"/></p>
 <p><input type="submit" value="get Diff"/></p>
 </form>
 
