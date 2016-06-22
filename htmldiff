@@ -69,7 +69,7 @@ def copyHeader(copy_func, source, key, header_name=None):
         return False
     elif header_name is None:
         header_name = key
-    copy_func("%s: %s" % (header_name, value))
+    copy_func(header_name, value)
     return True
 
 def setupRequest(source_headers):
@@ -216,7 +216,7 @@ def serveRequest():
             #    options["char_encoding"]='latin1'
 
     for proxy_header in ('Last-Modified', 'Expires'):
-        if copyHeader(sys.stdout.write, newheaders, proxy_header):
+        if copyHeader(lambda header, value: sys.stdout.write("%s: %s" %(header, value)), newheaders, proxy_header):
             print
     print
     p = Popen(["/usr/local/bin/htmldiff", refdoc.name, newdoc.name],
