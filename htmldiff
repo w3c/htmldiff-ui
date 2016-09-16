@@ -39,6 +39,13 @@ Page2 = """
 </form>
 
 <p><strong>Tip</strong>: if the document uses the W3C convention on linking to its previous version, you can specify only the address of the new document — the previous link will be automatically detected.</p>
+<h2>Diff markings</h2>
+<p>This service relies on <a href="https://www.gnu.org/software/diffutils/">GNU diff</a>. The found differences are roughly marked as follow:
+<ul>
+<li>deleted text is shown in pink with down-arrows (as styled for a &lt;del> element)</li>
+<li>where there is replacement, it’s shown in green with bi-directional arrows,</li>
+<li>where there is newly inserted text, it’s yellow with up arrows (&lt;ins> element)</li>
+</ul>
 <address>
 script $Revision$ of $Date$<br />
 by <a href="http://www.w3.org/People/Dom/">Dominique Hazaël-Massieux</a><br />based on <a href="https://dev.w3.org/cvsweb/2009/htmldiff/htmldiff.pl">Shane McCarron’ Perl script</a> wrapped in a <a href="http://dev.w3.org/cvsweb/2009/htmldiff/">Python CGI</a>
