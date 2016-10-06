@@ -95,7 +95,7 @@ def tidyFile(file):
                      "output_xhtml": "no",
                      "tidy_mark": "no",
                      "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,main,summary,math,semantics,mrow,mfenced,mtable,mtr,mtd,mi,mn,msub,mo,mfrac,munderover,mtext,svg,g,image,rect,text,desc,line,path,polygon,ellipse,tspan,defs,feoffset,fecolormatrix,filter,fegaussianblur,feblend,marker,circle',
-                     "new_inline_tags": 'video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source',
+                     "new_inline_tags": 'video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source,emu-val,emu-nt,emu-t',
                      "break_before_br": "no",
                      "vertical_space": "no",
                      "enclose_text": "no",
