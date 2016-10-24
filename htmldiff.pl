@@ -56,7 +56,10 @@
 # $Revision$
 #
 # $Log$
-# Revision 1.1  2014/01/06 08:04:51  dom
+# Revision 1.2  2016/10/24 15:04:28  dom
+# Add navigation script
+#
+# Revision 1.1  2014-01-06 08:04:51  dom
 # added copy of htmldiff perl script since aptest.com repo no longer available
 #
 # Revision 1.5  2008/03/05 13:23:16  ahby
@@ -333,6 +336,7 @@ function setOldDisplay() {
 }
 -->
 </script>
+<script src="https://www.w3.org/2016/10/htmldiff-nav.js"></script>
 );
 
 	}
