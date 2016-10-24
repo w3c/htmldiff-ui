@@ -56,6 +56,9 @@
 # $Revision$
 #
 # $Log$
+# Revision 1.3  2016/10/24 15:06:51  dom
+# Summary: Use nav script always
+#
 # Revision 1.2  2016/10/24 15:04:28  dom
 # Add navigation script
 #
@@ -313,7 +316,7 @@ sub splitit {
     { content: "\2193" }
 :focus { border: thin red solid}
 </style>
-);
+<script src="https://www.w3.org/2016/10/htmldiff-nav.js"></script>);
 	if ($opt_t) {
 		$styles .= q(
 <script type="text/javascript">
@@ -336,7 +339,6 @@ function setOldDisplay() {
 }
 -->
 </script>
-<script src="https://www.w3.org/2016/10/htmldiff-nav.js"></script>
 );
 
 	}
