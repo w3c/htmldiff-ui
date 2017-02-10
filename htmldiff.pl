@@ -56,6 +56,9 @@
 # $Revision$
 #
 # $Log$
+# Revision 1.4  2017/02/10 10:48:41  dom
+# Remove :focus rule per Simon Pieters request
+#
 # Revision 1.3  2016/10/24 15:06:51  dom
 # Summary: Use nav script always
 #
@@ -314,7 +317,6 @@ sub splitit {
 .diff-old:before,
 .diff-old:after
     { content: "\2193" }
-:focus { border: thin red solid}
 </style>
 <script src="https://www.w3.org/2016/10/htmldiff-nav.js"></script>);
 	if ($opt_t) {
