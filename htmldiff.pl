@@ -56,6 +56,9 @@
 # $Revision$
 #
 # $Log$
+# Revision 1.5  2017/03/30 09:04:03  dom
+# Summary: Update link to navigation script
+#
 # Revision 1.4  2017/02/10 10:48:41  dom
 # Remove :focus rule per Simon Pieters request
 #
@@ -318,7 +321,7 @@ sub splitit {
 .diff-old:after
     { content: "\2193" }
 </style>
-<script src="https://www.w3.org/2016/10/htmldiff-nav.js"></script>);
+<script src="https://w3c.github.io/htmldiff-nav/index.js"></script>);
 	if ($opt_t) {
 		$styles .= q(
 <script type="text/javascript">
