@@ -88,7 +88,8 @@ def setupRequest(source_headers):
 
 def tidyFile(file):
     file.seek(0)
-    doc = HTMLParser.parse(file.read())
+    p = HTMLParser()
+    doc = p.parse(file.read())
     file.close()
     file = tempfile.NamedTemporaryFile(
         mode='w+', prefix='htmldiff-', suffix='.html')
