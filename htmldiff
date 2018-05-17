@@ -12,7 +12,7 @@ import re
 import surbl
 import sys
 import tempfile
-from html5lib import HTMLParser, treewalkers, serializer
+import html5lib
 import urlparse
 from StringIO import StringIO
 
@@ -88,15 +88,14 @@ def setupRequest(source_headers):
 
 def tidyFile(file):
     file.seek(0)
-    p = HTMLParser()
-    doc = p.parse(file.read())
+    doc = html5lib.parse(file.read())
     file.close()
     file = tempfile.NamedTemporaryFile(
         mode='w+', prefix='htmldiff-', suffix='.html')
     atexit.register(file.close)
-    walker = treewalkers.getTreeWalker("etree")
+    walker = html5lib.getTreeWalker("etree")
     stream = walker(doc)
-    s = serializer.HTMLSerializer()
+    s = html5lib.serializer.HTMLSerializer()
     prettyhtml = s.serialize(stream)
     for item in prettyhtml:
         file.write(item)
