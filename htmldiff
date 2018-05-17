@@ -12,8 +12,9 @@ import re
 import surbl
 import sys
 import tempfile
-import tidy
+import html5lib
 import urlparse
+from StringIO import StringIO
 
 from subprocess import Popen, PIPE
 
@@ -86,40 +87,21 @@ def setupRequest(source_headers):
     return opener
 
 def tidyFile(file):
-    # option for tidy
-    options = dict(tidy_mark=0,show_warnings=0,quiet=1,char_encoding='utf8')
-    html5 = re.search(r"<!doctype\s+html\s*>", file.read(4096),
-                      re.IGNORECASE)
     file.seek(0)
-    html5_options = {"add_xml_space": "no",
-                     "output_xhtml": "no",
-                     "tidy_mark": "no",
-                     "new_blocklevel_tags": 'article,aside,canvas,dialog,details,figcaption,figure,footer,header,hgroup,menu,nav,section,main,summary,math,semantics,mrow,mfenced,mtable,mtr,mtd,mi,mn,msub,mo,mfrac,munderover,mtext,emu-alg,emu-xref,altglyph,altglyphdef,altglyphitem,animate,animatecolor,animatemotion,animatetransform,circle,clippath,color-profile,cursor,defs,desc,discard,ellipse,feblend,fecolormatrix,fecomponenttransfer,fecomposite,feconvolvematrix,fediffuselighting,fedisplacementmap,fedistantlight,fedropshadow,feflood,fefunca,fefuncb,fefuncg,fefuncr,fegaussianblur,feimage,femerge,femergenode,femorphology,feoffset,fepointlight,fespecularlighting,fespotlight,fetile,feturbulence,filter,font-face,font-face-format,font-face-name,font-face-src,font-face-uri,foreignobject,g,glyph,glyphref,hatch,hatchpath,hkern,image,line,lineargradient,marker,mask,mesh,meshgradient,meshpatch,meshrow,metadata,missing-glyph,mpath,path,pattern,polygon,polyline,radialgradient,rect,set,solidcolor,stop,svg,switch,symbol,text,textpath,title,tref,tspan,unknown,use,view,vkern,emu-intro,emu-xref,emu-clause,emu-val,emu-figure,emu-note,emu-nt,emu-grammar,emu-production,emu-geq,emu-rhs,emu-t,emu-mods,emu-opt,emu-params,emu-constraints,emu-oneof,emu-gann,emu-gmod,emu-gprose,emu-alg,emu-eqn,emu-table,emu-const,emu-see-also-para,emu-annex',
-                     "new_inline_tags": 'video,audio,canvas,ruby,rt,rp,time,meter,progress,track,source,emu-val,emu-nt,emu-t,mark',
-                     "break_before_br": "no",
-                     "vertical_space": "no",
-                     "enclose_text": "no",
-                     "numeric_entities": "yes",
-                     "wrap": "1000",
-                     "wrap_attributes": "no",
-                     "drop_empty_paras": "no"
-                     }
-    if html5:
-        options.update(html5_options)
-    newtidy = tidy.parseString(file.read(), **options)
-    if len(newtidy.errors) > 0:
-        if not html5:
-            file.seek(0)
-            options.update(html5_options)
-            newtidy = tidy.parseString(file.read(), **options)
+    doc = html5lib.parse(file.read())
     file.close()
     file = tempfile.NamedTemporaryFile(
         mode='w+', prefix='htmldiff-', suffix='.html')
     atexit.register(file.close)
-    file.write(str(newtidy))
+    walker = html5lib.getTreeWalker("etree")
+    stream = walker(doc)
+    s = html5lib.serializer.HTMLSerializer()
+    prettyhtml = s.serialize(stream)
+    for item in prettyhtml:
+        file.write(item)
     file.flush()
     file.seek(0)
-    return (file, newtidy.errors)
+    return (file, [])
 
 def matchPredecessorRel(rel):
     return rel and "predecessor-version" in rel.lower().split(" ")
@@ -138,7 +120,6 @@ def mirrorURL(url, opener):
         file = open(filename)
         if headers.has_key("content-encoding") and headers["content-encoding"] == "gzip":
             import gzip
-            from StringIO import StringIO
             data = StringIO(file.read())
             file.close()
             file = gzip.GzipFile(fileobj=data)

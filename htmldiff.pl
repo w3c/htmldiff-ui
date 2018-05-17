@@ -56,6 +56,11 @@
 # $Revision$
 #
 # $Log$
+# Revision 1.6  2018/05/17 13:53:51  dom
+# Switch from tidy to html5lib for preparing to htmldiff
+#
+# also, adapt a more robust approach to including diff style/script
+#
 # Revision 1.5  2017/03/30 09:04:03  dom
 # Summary: Update link to navigation script
 #
@@ -358,7 +363,7 @@ function setOldDisplay() {
 	while (<FILE>) {
 		if ($inhead == 1) {
 			if (m/\<\/head/i) {
-				print HEADER $styles;
+                                s/\<\/head/$styles\<\/head/i;
 			}
 			if (m/\<body/i) {
 				$inhead = 0;
