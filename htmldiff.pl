@@ -56,6 +56,9 @@
 # $Revision$
 #
 # $Log$
+# Revision 1.7  2018/05/17 14:17:56  dom
+# Summary: take into account no </head>
+#
 # Revision 1.6  2018/05/17 13:53:51  dom
 # Switch from tidy to html5lib for preparing to htmldiff
 #
@@ -358,14 +361,19 @@ function setOldDisplay() {
 	}
 
 	my $incomment = 0;
+        my $styleprinted = 0;
 	my $inhead = 1;
 	open(FILE, $filename) || die("File $filename cannot be opened: $!");
 	while (<FILE>) {
 		if ($inhead == 1) {
 			if (m/\<\/head/i) {
                                 s/\<\/head/$styles\<\/head/i;
+                                $styleprinted = 1;
 			}
 			if (m/\<body/i) {
+                                if (!$styleprinted) {
+                                      s/\<body/$styles\<body/i;
+                                }
 				$inhead = 0;
 				print HEADER;
 				if ($opt_t) {
