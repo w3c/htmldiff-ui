@@ -56,7 +56,7 @@ by <a href="http://www.w3.org/People/Dom/">Dominique Hazaël-Massieux</a><br />b
 """
 
 def checkInputUrl(url):
-    checker = surbl.SurblChecker('/usr/local/share/surbl/two-level-tlds','/afs/w3.org/pub/WWW/Systems/Server/debian/generic/usr/local/etc/surbl.whitelist')
+    checker = surbl.SurblChecker('/usr/local/share/surbl/two-level-tlds','/usr/local/etc/surbl.whitelist')
 
     if  url[:5] == 'file:' or len(urlparse.urlparse(url)[0])<2:
         print "Status: 403"
