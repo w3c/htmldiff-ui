@@ -365,27 +365,25 @@ function setOldDisplay() {
 	my $inhead = 1;
 	open(FILE, $filename) || die("File $filename cannot be opened: $!");
 	while (<FILE>) {
-		if ($inhead == 1) {
-			if (m/\<\/head/i) {
-                                s/\<\/head/$styles\<\/head/i;
-                                $styleprinted = 1;
-			}
-			if (m/\<body/i) {
-                                if (!$styleprinted) {
-                                      s/\<body/$styles\<body/i;
-                                }
-				$inhead = 0;
-				print HEADER;
-				if ($opt_t) {
-					print HEADER q(
-<form action=""><input type="button" onclick="setOldDisplay()" value="Show/Hide Old Content" /></form>
-);
-				}
-				close HEADER;
-			} else {
-				print HEADER;
-			}
-		} else {
+            if ($inhead == 1) {
+                if (m,<(/head>|body|div),i) {    # end of head section?
+                    print HEADER $`;    # preceding into HEADER
+                    print HEADER $styles unless $styleprinted;
+                    $styleprinted = 1;
+                    if ( "\L$&" eq '</head>' ) {
+                        print HEADER $&;# </head> also to HEADER
+                    }
+                    else {
+                        $retval .= $&;    # body or div to retval
+                    }
+                    $retval .= $';        # remainder to retval
+                    $inhead = 0;
+                    print HEADER "\n";
+                    close HEADER;
+                } else {
+                    print HEADER;
+                }
+            } else {
 			if ($incomment) {
 				if (m;-->;) {
 					$incomment = 0;
