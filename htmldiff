@@ -106,6 +106,12 @@ def tidyFile(file):
 def matchPredecessorRel(rel):
     return rel and "predecessor-version" in rel.lower().split(" ")
 
+def rmfile(filename):
+    try:
+        os.unlink(filename)
+    except:
+        pass
+
 def mirrorURL(url, opener):
     try:
         filename, headers = opener.retrieve(url)
@@ -116,7 +122,7 @@ def mirrorURL(url, opener):
     except AttributeError:  # ProxyAuthURLopener returned None.
         pass                # There's already an error set.
     else:
-        atexit.register(os.unlink, filename)
+        atexit.register(rmfile, filename)
         file = open(filename)
         if headers.has_key("content-encoding") and headers["content-encoding"] == "gzip":
             import gzip
