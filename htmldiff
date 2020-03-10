@@ -49,7 +49,7 @@ Page2 = """
 </ul>
 <address>
 script $Revision$ of $Date$<br />
-by <a href="http://www.w3.org/People/Dom/">Dominique Hazaël-Massieux</a><br />based on <a href="https://dev.w3.org/cvsweb/2009/htmldiff/htmldiff.pl">Shane McCarron’ Perl script</a> wrapped in a <a href="http://dev.w3.org/cvsweb/2009/htmldiff/">Python CGI</a>
+by <a href="http://www.w3.org/People/Dom/">Dominique Hazaël-Massieux</a><br />based on <a href="https://github.com/w3c/htmldiff-ui/blob/master/htmldiff.pl">Shane McCarron’ Perl script</a> wrapped in a <a href="https://github.com/w3c/htmldiff-ui/blob/master/htmldiff">Python CGI</a>
 </address>
 </body>
 </html>
