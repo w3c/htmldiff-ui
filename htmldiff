@@ -223,6 +223,9 @@ def serveRequest():
         error = "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p><pre>%s</pre>" % (cgi.escape(err),)
         showPage(esc1, esc2, error)
     else:
+        # html5lib strips the doctype, so we add it manually
+        # cf https://github.com/w3c/htmldiff-ui/issues/4#issuecomment-642831382
+        print "<!doctype html>"
         print out
 if __name__ == '__main__':
     if os.environ.has_key('SCRIPT_NAME'):
