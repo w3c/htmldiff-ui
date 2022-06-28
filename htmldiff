@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 # MIT License
 # © W3C® (MIT, ERCIM, Keio, Beihang).
@@ -10,16 +10,17 @@
 
 import atexit
 import cgi
+import html
 import http_auth
-import httplib
+import http.client
 import os
 import re
 import surbl
 import sys
 import tempfile
 import html5lib
-import urlparse
-from StringIO import StringIO
+import urllib.parse
+from io import StringIO
 
 from subprocess import Popen, PIPE
 
@@ -63,17 +64,17 @@ by <a href="http://www.w3.org/People/Dom/">Dominique Hazaël-Massieux</a><br />b
 def checkInputUrl(url):
     checker = surbl.SurblChecker('/usr/local/share/surbl/two-level-tlds','/usr/local/etc/surbl.whitelist')
 
-    if  url[:5] == 'file:' or len(urlparse.urlparse(url)[0])<2:
-        print "Status: 403"
-        print "Content-Type: text/plain"
-        print
-        print "sorry, I decline to handle file: addresses"
+    if  url[:5] == 'file:' or len(urllib.parse.urlparse(url)[0])<2:
+        print("Status: 403")
+        print("Content-Type: text/plain")
+        print()
+        print("sorry, I decline to handle file: addresses")
         sys.exit()
     elif checker.isMarkedAsSpam(url):
-        print "Status: 403"
-        print "Content-Type: text/plain; charset=utf-8"
-        print
-        print "sorry, this URL matches a record known in SURBL. See http://www.surbl.org/"
+        print("Status: 403")
+        print("Content-Type: text/plain; charset=utf-8")
+        print()
+        print("sorry, this URL matches a record known in SURBL. See http://www.surbl.org/")
         sys.exit()
 
 def copyHeader(copy_func, source, key, header_name=None):
@@ -120,16 +121,16 @@ def rmfile(filename):
 def mirrorURL(url, opener):
     try:
         filename, headers = opener.retrieve(url)
-    except IOError, error:
+    except IOError as error:
         opener.error = "I/O error: %s %s" % (error.errno, error.strerror)
-    except httplib.InvalidURL:
+    except http.client.InvalidURL:
         opener.error = "Invalid URL submitted"
     except AttributeError:  # ProxyAuthURLopener returned None.
         pass                # There's already an error set.
     else:
         atexit.register(rmfile, filename)
         file = open(filename)
-        if headers.has_key("content-encoding") and headers["content-encoding"] == "gzip":
+        if "content-encoding" in headers and headers["content-encoding"] == "gzip":
             import gzip
             data = StringIO(file.read())
             file.close()
@@ -142,30 +143,30 @@ def mirrorURL(url, opener):
     return (None, {})
 
 def showPage(url1='', url2='', error_html='', **headers):
-    for name, value in headers.items():
-        print "%s: %s" % (name.replace('_', '-'), value)
-    print
-    print Page
-    print error_html
-    print Page2 % (url1, url2)
+    for name, value in list(headers.items()):
+        print("%s: %s" % (name.replace('_', '-'), value))
+    print()
+    print(Page)
+    print(error_html)
+    print(Page2 % (url1, url2))
     sys.exit()
 
 def serveRequest():
     fields = cgi.FieldStorage()
 
-    if (not fields.has_key('doc2')):
+    if ('doc2' not in fields):
         showPage(Content_Type=CONTENT_TYPE)
     # if doc1 is not specified, we load doc2 to check if it has a previous version link
     doc2 = fields['doc2'].value
     checkInputUrl(doc2)
     url_opener2 = setupRequest(fields.headers)
     newdoc, newheaders = mirrorURL(doc2, url_opener2)
-    if fields.has_key('doc1'):
+    if 'doc1' in fields:
         doc1 = fields['doc1'].value
     elif newdoc is not None:
-        from BeautifulSoup import BeautifulSoup
+        from bs4 import BeautifulSoup
 
-        soup = BeautifulSoup(newdoc.read())
+        soup = BeautifulSoup(newdoc.read(), "html.parser")
         newdoc.seek(0)
         try:
             doc1 = soup.find(text=re.compile("Previous Version",re.IGNORECASE)).findNext(name="a", attrs={"href":True})["href"]
@@ -180,10 +181,10 @@ def serveRequest():
         showPage(Content_Type=CONTENT_TYPE)
 
     checkInputUrl(doc1)
-    esc1 = cgi.escape(doc1, True)
-    esc2 = cgi.escape(doc2, True)
-    urlcomponents1 = urlparse.urlparse(doc1)
-    urlcomponents2 = urlparse.urlparse(doc2)
+    esc1 = html.escape(doc1, True)
+    esc2 = html.escape(doc2, True)
+    urlcomponents1 = urllib.parse.urlparse(doc1)
+    urlcomponents2 = urllib.parse.urlparse(doc2)
     # if same domain, we can use the same urlopener
     # otherwise, we create a separate one
     if urlcomponents2[1] == urlcomponents1[1]:
@@ -202,22 +203,22 @@ def serveRequest():
             http_error = url_opener2.error
             url = esc2
         if re.match("^[1234][0-9][0-9] ", http_error):
-            print "Status: %s" %(http_error)
-        error="<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a>.</p>" % (cgi.escape(http_error), url, url)
+            print("Status: %s" %(http_error))
+        error="<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a>.</p>" % (html.escape(http_error), url, url)
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
 
-    print "Content-Type: text/html"
-    if newheaders.has_key('Content-Type'):
+    print("Content-Type: text/html")
+    if 'Content-Type' in newheaders:
         contentType = cgi.parse_header(newheaders["Content-Type"])
-        if contentType[1].has_key('charset'):
+        if 'charset' in contentType[1]:
             charset = contentType[1]['charset'].lower()
             #if charset == "iso-8859-1":
             #    options["char_encoding"]='latin1'
 
     for proxy_header in ('Last-Modified', 'Expires'):
         if copyHeader(lambda header, value: sys.stdout.write("%s: %s" %(header, value)), newheaders, proxy_header):
-            print
-    print
+            print()
+    print()
     p = Popen(["/usr/local/bin/htmldiff", refdoc.name, newdoc.name],
               stdin=PIPE, stdout=PIPE, stderr=PIPE)
     sys.stdout.flush()
@@ -225,13 +226,13 @@ def serveRequest():
     (out, err) = p.communicate()
     p.stdin.close()
     if err:
-        error = "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p><pre>%s</pre>" % (cgi.escape(err),)
+        error = "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p><pre>%s</pre>" % (html.escape(err),)
         showPage(esc1, esc2, error)
     else:
         # html5lib strips the doctype, so we add it manually
         # cf https://github.com/w3c/htmldiff-ui/issues/4#issuecomment-642831382
-        print "<!doctype html>"
-        print out
+        print("<!doctype html>")
+        print(out)
 if __name__ == '__main__':
-    if os.environ.has_key('SCRIPT_NAME'):
+    if 'SCRIPT_NAME' in os.environ:
         serveRequest()
