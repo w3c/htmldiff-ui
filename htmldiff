@@ -232,7 +232,7 @@ def serveRequest():
         # html5lib strips the doctype, so we add it manually
         # cf https://github.com/w3c/htmldiff-ui/issues/4#issuecomment-642831382
         print("<!doctype html>")
-        print(out)
+        print(out.decode("utf-8"))
 if __name__ == '__main__':
     if 'SCRIPT_NAME' in os.environ:
         serveRequest()
