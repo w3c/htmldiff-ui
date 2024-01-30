@@ -312,22 +312,24 @@ sub splitit {
 	my $inelement=0;
 	my $retval = "";
 	my $styles = q(<style type='text/css'>
-.diff-old-a {
-  font-size: smaller;
-  color: red;
+:root {
+	--diff-old-bg: #fbb;
+	--diff-chg-bg: lime;
+	--diff-new-bg: yellow;
 }
+@media (prefers-color-scheme: dark) {
+:root {
+	--diff-old-bg: #a11;
+	--diff-chg-bg: #191;
+	--diff-new-bg: #441;
+}}
 
-.diff-new { background-color: yellow; }
-.diff-chg { background-color: lime; }
-.diff-new:before,
-.diff-new:after
-    { content: "\2191" }
-.diff-chg:before, .diff-chg:after
-    { content: "\2195" }
-.diff-old { text-decoration: line-through; background-color: #FBB; }
-.diff-old:before,
-.diff-old:after
-    { content: "\2193" }
+.diff-new { background-color: var(--diff-new-bg); }
+.diff-new:before, .diff-new:after { content: "\2191" }
+.diff-chg { background-color: var(--diff-chg-bg); }
+.diff-chg:before, .diff-chg:after { content: "\2195" }
+.diff-old { text-decoration: line-through; background-color: var(--diff-old-bg); }
+.diff-old:before, .diff-old:after { content: "\2193" }
 </style>
 <script src="https://w3c.github.io/htmldiff-nav/index.js"></script>);
 	if ($opt_t) {
