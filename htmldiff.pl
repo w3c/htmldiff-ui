@@ -318,7 +318,7 @@ sub splitit {
 	--diff-new-bg: yellow;
 }
 @media (prefers-color-scheme: dark) {
-:root {
+:root:has(meta[name="color-scheme"][content ~= "dark"]) {
 	--diff-old-bg: #a11;
 	--diff-chg-bg: #191;
 	--diff-new-bg: #441;
