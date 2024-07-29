@@ -9,7 +9,6 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import atexit
-import cgi
 import html
 import http_auth
 import http.client
@@ -20,6 +19,7 @@ import sys
 import tempfile
 import html5lib
 import urllib.parse
+from email.message import EmailMessage
 from io import StringIO
 
 from subprocess import Popen, PIPE
@@ -86,9 +86,9 @@ def copyHeader(copy_func, source, key, header_name=None):
     copy_func(header_name, value)
     return True
 
-def setupRequest(source_headers):
+def setupRequest():
     opener = http_auth.ProxyAuthURLopener()
-    copyHeader(opener.addheader, source_headers, 'If-Modified-Since')
+    copyHeader(opener.addheader, os.environ, 'HTTP_IF_MODIFIED_SINCE', 'If-Modified-Since')
     copyHeader(opener.addheader, os.environ, 'REMOTE_ADDR', 'X_Forward_IP_Addr')
     return opener
 
@@ -152,17 +152,23 @@ def showPage(url1='', url2='', error_html='', **headers):
     sys.exit()
 
 def serveRequest():
-    fields = cgi.FieldStorage()
 
+    environ = os.environ
+    if 'QUERY_STRING' not in environ:
+        showPage(Content_Type=CONTENT_TYPE)
+
+    # Use dict(parse_qsl) so we don't get lists of values.
+    fields = dict(urllib.parse.parse_qsl(environ['QUERY_STRING'],
+                                         max_num_fields = 2))
     if ('doc2' not in fields):
         showPage(Content_Type=CONTENT_TYPE)
     # if doc1 is not specified, we load doc2 to check if it has a previous version link
-    doc2 = fields['doc2'].value
+    doc2 = fields['doc2']
     checkInputUrl(doc2)
-    url_opener2 = setupRequest(fields.headers)
+    url_opener2 = setupRequest()
     newdoc, newheaders = mirrorURL(doc2, url_opener2)
     if 'doc1' in fields:
-        doc1 = fields['doc1'].value
+        doc1 = fields['doc1']
     elif newdoc is not None:
         from bs4 import BeautifulSoup
 
@@ -190,7 +196,7 @@ def serveRequest():
     if urlcomponents2[1] == urlcomponents1[1]:
         url_opener = url_opener2
     else:
-        url_opener = setupRequest(fields.headers)
+        url_opener = setupRequest()
 
     refdoc, refheaders = mirrorURL(doc1, url_opener)
     if not (refdoc and newdoc):
@@ -209,9 +215,11 @@ def serveRequest():
 
     print("Content-Type: text/html")
     if 'Content-Type' in newheaders:
-        contentType = cgi.parse_header(newheaders["Content-Type"])
-        if 'charset' in contentType[1]:
-            charset = contentType[1]['charset'].lower()
+        msg = EmailMessage()
+        msg['content-type'] = newheaders["Content-Type"]
+        contentType = msg.get_content_type()
+        if 'charset' in msg['content-type'].params:
+            charset = msg['content-type'].params['charset'].lower()
             #if charset == "iso-8859-1":
             #    options["char_encoding"]='latin1'
 
