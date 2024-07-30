@@ -118,8 +118,25 @@ def rmfile(filename):
     except:
         pass
 
+def escapeURLQueryString(url=None):
+    if url is None:
+        return None
+    
+    url_split = urllib.parse.urlsplit(url)
+
+    if url_split.query:
+        fields = dict(urllib.parse.parse_qsl(url_split.query))
+        escaped_qs = urllib.parse.urlencode(fields)
+        url_split = url_split._replace(query=escaped_qs)
+        rv = urllib.parse.urlunsplit(url_split)
+    else:
+        rv = url
+
+    return rv
+
 def mirrorURL(url, opener):
     try:
+        url = escapeURLQueryString(url)
         filename, headers = opener.retrieve(url)
     except IOError as error:
         opener.error = "I/O error: %s %s" % (error.errno, error.strerror)
