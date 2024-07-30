@@ -121,7 +121,7 @@ def rmfile(filename):
 def escapeURLQueryString(url=None):
     if url is None:
         return None
-    
+
     url_split = urllib.parse.urlsplit(url)
 
     if url_split.query:
@@ -192,7 +192,7 @@ def serveRequest():
         soup = BeautifulSoup(newdoc.read(), "html.parser")
         newdoc.seek(0)
         try:
-            doc1 = soup.find(text=re.compile("Previous Version",re.IGNORECASE)).findNext(name="a", attrs={"href":True})["href"]
+            doc1 = soup.find(string=re.compile("Previous Version",re.IGNORECASE)).findNext(name="a", attrs={"href":True})["href"]
         except:
             try:
                 doc1 = soup.find(name=["a", "link"], attrs={"href":True, rel:matchPredecessorRel})["href"]
