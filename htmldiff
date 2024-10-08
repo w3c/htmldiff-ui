@@ -283,7 +283,7 @@ def serveRequest():
     print("Content-Type: text/html")
     if 'Content-Type' in newheaders:
         charset = newheaders.get_content_charset()
-        if charset
+        if charset:
             charset = charset.lower()
             #if charset == "iso-8859-1":
             #    options["char_encoding"]='latin1'
