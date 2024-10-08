@@ -20,7 +20,7 @@ import shutil
 import tempfile
 import html5lib
 import urllib.parse
-from email.message import EmailMessage
+import urllib.error
 from io import StringIO
 
 from subprocess import Popen, PIPE
@@ -111,7 +111,7 @@ def processResponse(response):
         if not checkResponseIsHTML(response):
             raise InvalidContentType("Content-Type is not text/html")
 
-        tfp = tempfile.NamedTemporaryFile(prefix='htmldiff', delete=False)
+        tfp = tempfile.NamedTemporaryFile(prefix='htmldiff-', delete=False)
         filename = tfp.name
         # Copy the binary content of the response to the file
         shutil.copyfileobj(response, tfp)
@@ -131,8 +131,8 @@ def checkResponseIsHTML(response):
     rv = False
 
     if 'Content-Type' in response.headers:
-        content_type = response.getheader('Content-Type')
-        if content_type and content_type.startswith('text/html'):
+        content_type = response.headers.get_content_type()
+        if content_type and content_type == 'text/html':
             rv = True
 
     return rv
@@ -184,8 +184,10 @@ def mirrorURL(url, opener):
         url = escapeURLQueryString(url)
         response = opener.open(url)
         filename, headers = processResponse(response)
+    except urllib.error.HTTPError as error:
+        opener.error = f"HTTP Error:  {error.code} {error.reason}"
     except OSError as error:
-        opener.error = "I/O error: %s %s" % (error.errno, error.strerror)
+        opener.error = f"I/O error: {error.errno} {error.strerr}"
     except http.client.InvalidURL:
         opener.error = "Invalid URL submitted"
     except InvalidContentType:
@@ -200,7 +202,7 @@ def mirrorURL(url, opener):
             data = StringIO(file.read())
             file.close()
             file = gzip.GzipFile(fileobj=data)
-        file,errors = tidyFile(file)
+        file, errors = tidyFile(file)
         if len(errors) == 0:
             return (file, headers)
         else:
@@ -280,11 +282,9 @@ def serveRequest():
 
     print("Content-Type: text/html")
     if 'Content-Type' in newheaders:
-        msg = EmailMessage()
-        msg['content-type'] = newheaders["Content-Type"]
-        contentType = msg.get_content_type()
-        if 'charset' in msg['content-type'].params:
-            charset = msg['content-type'].params['charset'].lower()
+        charset = newheaders.get_content_charset()
+        if charset
+            charset = charset.lower()
             #if charset == "iso-8859-1":
             #    options["char_encoding"]='latin1'
 
