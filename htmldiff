@@ -186,6 +186,8 @@ def mirrorURL(url, opener):
         filename, headers = processResponse(response)
     except urllib.error.HTTPError as error:
         opener.error = f"HTTP Error: {error.code} {error.reason}"
+    except urllib.error.URLError as error:
+        opener.error = f"URL error: {str(error.reason)}"
     except OSError as error:
         opener.error = f"I/O error: {error.errno} {error.strerr}"
     except http.client.InvalidURL:
