@@ -214,7 +214,7 @@ def mirrorURL(url, opener):
     except urllib.error.URLError as error:
         opener.error = f"URL error: {str(error.reason)}"
     except OSError as error:
-        opener.error = f"I/O error: {error.errno} {error.strerr}"
+        opener.error = f"I/O error: {error.errno} {error.strerror}"
     except http.client.InvalidURL:
         opener.error = "Invalid URL submitted"
     except InvalidContentType:
