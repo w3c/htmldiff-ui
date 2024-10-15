@@ -186,7 +186,7 @@ def matchPredecessorRel(rel):
 def rmfile(filename):
     try:
         os.unlink(filename)
-    except:
+    except Exception:
         pass
 
 def escapeURLQueryString(url=None):
@@ -238,7 +238,7 @@ def mirrorURL(url, opener):
 
 def showPage(url1='', url2='', error_html='', **headers):
     for name, value in list(headers.items()):
-        print("%s: %s" % (name.replace('_', '-'), value))
+        print("{}: {}".format(name.replace('_', '-'), value))
     print()
     print(Page)
     print(error_html)
@@ -254,7 +254,7 @@ def serveRequest():
     # Use dict(parse_qsl) so we don't get lists of values.
     fields = dict(urllib.parse.parse_qsl(environ['QUERY_STRING'],
                                          max_num_fields = 2))
-    if ('doc2' not in fields):
+    if 'doc2' not in fields:
         showPage(Content_Type=CONTENT_TYPE)
     # if doc1 is not specified, we load doc2 to check if it has a previous version link
     doc2 = fields['doc2']
@@ -275,7 +275,7 @@ def serveRequest():
                 doc1 = None
     else:
         doc1 = None
-    if (not doc1):
+    if not doc1:
         showPage(Content_Type=CONTENT_TYPE)
 
     checkInputUrl(doc1)
@@ -301,8 +301,8 @@ def serveRequest():
             http_error = url_opener2.error
             url = esc2
         if re.match("^[1234][0-9][0-9] ", http_error):
-            print("Status: %s" %(http_error))
-        error="<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a>.</p>" % (html.escape(http_error), url, url)
+            print(f"Status: {http_error}")
+        error="<p style='color:#FF0000'>An error {} occured trying to get <a href={}>{}</a>.</p>".format(html.escape(http_error), url, url)
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
 
     print("Content-Type: text/html")
@@ -314,7 +314,7 @@ def serveRequest():
             #    options["char_encoding"]='latin1'
 
     for proxy_header in ('Last-Modified', 'Expires'):
-        if copyHeader(lambda header, value: sys.stdout.write("%s: %s" %(header, value)), newheaders, proxy_header):
+        if copyHeader(lambda header, value: sys.stdout.write(f"{header}: {value}"), newheaders, proxy_header):
             print()
     print()
     p = Popen(["/usr/local/bin/htmldiff", refdoc.name, newdoc.name],
@@ -324,7 +324,7 @@ def serveRequest():
     (out, err) = p.communicate()
     p.stdin.close()
     if err:
-        error = "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p><pre>%s</pre>" % (html.escape(err),)
+        error = "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p><pre>{}</pre>".format(html.escape(err),)
         showPage(esc1, esc2, error)
     else:
         # html5lib strips the doctype, so we add it manually
