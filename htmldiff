@@ -10,20 +10,20 @@
 
 import atexit
 import html
-import http_auth
-import http.client
 import os
 import re
-import surbl
 import sys
 import shutil
 import tempfile
-import html5lib
 import urllib.parse
 import urllib.error
 from io import StringIO
-
 from subprocess import Popen, PIPE
+
+import http.client
+import http_auth
+import html5lib
+import surbl
 
 CONTENT_TYPE = "text/html;charset=utf-8"
 
