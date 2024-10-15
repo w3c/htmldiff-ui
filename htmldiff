@@ -120,7 +120,6 @@ def copyHeader(copy_func, source, key, header_name=None):
 def setupRequest():
     opener = http_auth.ProtectedURLopener()
     copyHeader(opener.add_header, os.environ, 'HTTP_IF_MODIFIED_SINCE', 'If-Modified-Since')
-    copyHeader(opener.add_header, os.environ, 'REMOTE_ADDR', 'X_Forward_IP_Addr')
     return opener
 
 def processResponse(response):
