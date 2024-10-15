@@ -17,10 +17,12 @@ import shutil
 import tempfile
 import urllib.parse
 import urllib.error
+import gzip
 from io import StringIO
 from subprocess import Popen, PIPE
-
 import http.client
+from bs4 import BeautifulSoup
+
 import http_auth
 import html5lib
 import surbl
@@ -224,7 +226,6 @@ def mirrorURL(url, opener):
         atexit.register(rmfile, filename)
         file = open(filename)
         if "content-encoding" in headers and headers["content-encoding"] == "gzip":
-            import gzip
             data = StringIO(file.read())
             file.close()
             file = gzip.GzipFile(fileobj=data)
@@ -263,8 +264,6 @@ def serveRequest():
     if 'doc1' in fields:
         doc1 = fields['doc1']
     elif newdoc is not None:
-        from bs4 import BeautifulSoup
-
         soup = BeautifulSoup(newdoc.read(), "html.parser")
         newdoc.seek(0)
         try:
