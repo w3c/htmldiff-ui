@@ -64,7 +64,6 @@ by <a href="http://www.w3.org/People/Dom/">Dominique Hazaël-Massieux</a><br />b
 
 class InvalidContentType(Exception):
     "Raised when an HTTP GET returns a non text/html resource"
-    pass
 
 def validate_url(url):
     "returns true if a url is valid, false otherwise"
