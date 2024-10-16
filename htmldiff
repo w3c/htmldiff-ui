@@ -80,13 +80,16 @@ def validate_url(url):
 
     # check domain name has at least two components)
     netloc_parts = parsed_url.netloc.split('.')
-    if len(netloc_parts) < 2 or len(netloc_parts[0]) == 0 or len(netloc_parts[1]) == 0:
+    if ( len(netloc_parts) < 2
+         or len(netloc_parts[0]) == 0
+         or len(netloc_parts[1]) == 0 ):
         return False
 
     return True
 
 def checkInputUrl(url):
-    checker = surbl.SurblChecker('/usr/local/share/surbl/two-level-tlds','/usr/local/etc/surbl.whitelist')
+    checker = surbl.SurblChecker('/usr/local/share/surbl/two-level-tlds',
+                                 '/usr/local/etc/surbl.whitelist')
 
     if  url[:5] == 'file:' or len(urllib.parse.urlparse(url)[0])<2:
         print("Status: 403")
@@ -109,17 +112,20 @@ def checkInputUrl(url):
         sys.exit()
 
 def copyHeader(copy_func, source, key, header_name=None):
+    rv = False
     value = source.get(key)
-    if not value:
-        return False
-    elif header_name is None:
-        header_name = key
-    copy_func(header_name, value)
-    return True
+
+    if value:
+        if header_name is None:
+            header_name = key
+        copy_func(header_name, value)
+        rv = True
+    return rv
 
 def setupRequest():
     opener = http_auth.ProtectedURLopener()
-    copyHeader(opener.add_header, os.environ, 'HTTP_IF_MODIFIED_SINCE', 'If-Modified-Since')
+    copyHeader(opener.add_header, os.environ,
+               'HTTP_IF_MODIFIED_SINCE', 'If-Modified-Since')
     return opener
 
 def processResponse(response):
