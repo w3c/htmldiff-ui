@@ -10,19 +10,22 @@
 
 import atexit
 import html
-import http_auth
-import http.client
 import os
 import re
-import surbl
 import sys
+import shutil
 import tempfile
-import html5lib
 import urllib.parse
-from email.message import EmailMessage
+import urllib.error
+import gzip
 from io import StringIO
-
 from subprocess import Popen, PIPE
+import http.client
+from bs4 import BeautifulSoup
+
+import http_auth
+import html5lib
+import surbl
 
 CONTENT_TYPE = "text/html;charset=utf-8"
 
@@ -61,14 +64,45 @@ by <a href="http://www.w3.org/People/Dom/">Dominique Hazaël-Massieux</a><br />b
 </html>
 """
 
+class InvalidContentType(Exception):
+    "Raised when an HTTP GET returns a non text/html resource"
+
+def validate_url(url):
+    "returns true if a url is valid, false otherwise"
+    if not url:
+        return False
+
+    parsed_url = urllib.parse.urlparse(url)
+
+    # validate schema
+    if parsed_url.scheme not in ['http', 'https']:
+        return False
+
+    # check domain name has at least two components)
+    netloc_parts = parsed_url.netloc.split('.')
+    if ( len(netloc_parts) < 2
+         or len(netloc_parts[0]) == 0
+         or len(netloc_parts[1]) == 0 ):
+        return False
+
+    return True
+
 def checkInputUrl(url):
-    checker = surbl.SurblChecker('/usr/local/share/surbl/two-level-tlds','/usr/local/etc/surbl.whitelist')
+    checker = surbl.SurblChecker('/usr/local/share/surbl/two-level-tlds',
+                                 '/usr/local/etc/surbl.whitelist')
 
     if  url[:5] == 'file:' or len(urllib.parse.urlparse(url)[0])<2:
         print("Status: 403")
         print("Content-Type: text/plain")
         print()
         print("sorry, I decline to handle file: addresses")
+        sys.exit()
+    elif not validate_url(url):
+        print("Status: 403")
+        print("Content-Type: text/plain")
+        print()
+        url = html.escape(url, True)
+        print(f"sorry, I decline to handle this address: {url}")
         sys.exit()
     elif checker.isMarkedAsSpam(url):
         print("Status: 403")
@@ -78,19 +112,61 @@ def checkInputUrl(url):
         sys.exit()
 
 def copyHeader(copy_func, source, key, header_name=None):
+    rv = False
     value = source.get(key)
-    if not value:
-        return False
-    elif header_name is None:
-        header_name = key
-    copy_func(header_name, value)
-    return True
+
+    if value:
+        if header_name is None:
+            header_name = key
+        copy_func(header_name, value)
+        rv = True
+    return rv
 
 def setupRequest():
-    opener = http_auth.ProxyAuthURLopener()
-    copyHeader(opener.addheader, os.environ, 'HTTP_IF_MODIFIED_SINCE', 'If-Modified-Since')
-    copyHeader(opener.addheader, os.environ, 'REMOTE_ADDR', 'X_Forward_IP_Addr')
+    opener = http_auth.ProtectedURLopener()
+    copyHeader(opener.add_header, os.environ,
+               'HTTP_IF_MODIFIED_SINCE', 'If-Modified-Since')
     return opener
+
+def processResponse(response):
+    """
+    Extracts the headers and body returned by a succesful
+    DirectorOpener HTTP GET request.
+
+    Stores the body into a temporary file and returns the file and headers.
+    Caller must delete the temporary file.
+    If there's no response object, returns a (None, {}) tuple.
+    """
+    if response:
+
+        if not checkResponseIsHTML(response):
+            raise InvalidContentType("Content-Type is not text/html")
+
+        tfp = tempfile.NamedTemporaryFile(prefix='htmldiff-', delete=False)
+        filename = tfp.name
+        # Copy the binary content of the response to the file
+        shutil.copyfileobj(response, tfp)
+        tfp.close()
+
+        return (filename, response.headers)
+
+    else:
+        return (None, {})
+
+def checkResponseIsHTML(response):
+    """
+    Returns True if headers have a Content-Type header
+    and if this header is of type text/html; returns
+    False otherwise.
+    """
+    rv = False
+
+    if 'Content-Type' in response.headers:
+        content_type = response.headers.get_content_type()
+        if content_type and content_type == 'text/html':
+            rv = True
+
+    return rv
 
 def tidyFile(file):
     file.seek(0)
@@ -115,7 +191,7 @@ def matchPredecessorRel(rel):
 def rmfile(filename):
     try:
         os.unlink(filename)
-    except:
+    except Exception:
         pass
 
 def escapeURLQueryString(url=None):
@@ -137,22 +213,28 @@ def escapeURLQueryString(url=None):
 def mirrorURL(url, opener):
     try:
         url = escapeURLQueryString(url)
-        filename, headers = opener.retrieve(url)
-    except IOError as error:
-        opener.error = "I/O error: %s %s" % (error.errno, error.strerror)
+        response = opener.open(url)
+        filename, headers = processResponse(response)
+    except urllib.error.HTTPError as error:
+        opener.error = f"HTTP error: {error.code} {error.reason}"
+    except urllib.error.URLError as error:
+        opener.error = f"URL error: {str(error.reason)}"
+    except OSError as error:
+        opener.error = f"I/O error: {error.errno} {error.strerror}"
     except http.client.InvalidURL:
         opener.error = "Invalid URL submitted"
-    except AttributeError:  # ProxyAuthURLopener returned None.
+    except InvalidContentType:
+        opener.error = "Content-Type is not text/html"
+    except AttributeError:  # ProxyProtectedURLopener returned None.
         pass                # There's already an error set.
     else:
         atexit.register(rmfile, filename)
         file = open(filename)
         if "content-encoding" in headers and headers["content-encoding"] == "gzip":
-            import gzip
             data = StringIO(file.read())
             file.close()
             file = gzip.GzipFile(fileobj=data)
-        file,errors = tidyFile(file)
+        file, errors = tidyFile(file)
         if len(errors) == 0:
             return (file, headers)
         else:
@@ -161,7 +243,7 @@ def mirrorURL(url, opener):
 
 def showPage(url1='', url2='', error_html='', **headers):
     for name, value in list(headers.items()):
-        print("%s: %s" % (name.replace('_', '-'), value))
+        print("{}: {}".format(name.replace('_', '-'), value))
     print()
     print(Page)
     print(error_html)
@@ -177,18 +259,18 @@ def serveRequest():
     # Use dict(parse_qsl) so we don't get lists of values.
     fields = dict(urllib.parse.parse_qsl(environ['QUERY_STRING'],
                                          max_num_fields = 2))
-    if ('doc2' not in fields):
+    if 'doc2' not in fields:
         showPage(Content_Type=CONTENT_TYPE)
     # if doc1 is not specified, we load doc2 to check if it has a previous version link
     doc2 = fields['doc2']
     checkInputUrl(doc2)
     url_opener2 = setupRequest()
     newdoc, newheaders = mirrorURL(doc2, url_opener2)
+    newerror = url_opener2.error
+
     if 'doc1' in fields:
         doc1 = fields['doc1']
     elif newdoc is not None:
-        from bs4 import BeautifulSoup
-
         soup = BeautifulSoup(newdoc.read(), "html.parser")
         newdoc.seek(0)
         try:
@@ -200,12 +282,13 @@ def serveRequest():
                 doc1 = None
     else:
         doc1 = None
-    if (not doc1):
+    if not doc1:
         showPage(Content_Type=CONTENT_TYPE)
 
     checkInputUrl(doc1)
     esc1 = html.escape(doc1, True)
     esc2 = html.escape(doc2, True)
+
     urlcomponents1 = urllib.parse.urlparse(doc1)
     urlcomponents2 = urllib.parse.urlparse(doc2)
     # if same domain, we can use the same urlopener
@@ -215,33 +298,39 @@ def serveRequest():
     else:
         url_opener = setupRequest()
 
-    refdoc, refheaders = mirrorURL(doc1, url_opener)
+    # only retrieve refdoc if we were succesful retrieving newdoc
+    if newdoc:
+        refdoc, refheaders = mirrorURL(doc1, url_opener)
+    else:
+        refdoc = refheaders = None
+
     if not (refdoc and newdoc):
         http_error = ""
         url = ""
-        if not refdoc:
+        if not newdoc:
+            http_error = newerror
+            url = esc2
+        else:
             http_error = url_opener.error
             url = esc1
-        else:
-            http_error = url_opener2.error
-            url = esc2
-        if re.match("^[1234][0-9][0-9] ", http_error):
-            print("Status: %s" %(http_error))
-        error="<p style='color:#FF0000'>An error (%s) occured trying to get <a href='%s'>%s</a>.</p>" % (html.escape(http_error), url, url)
+
+        #@@ review this with pfe.. infinite loop
+        #if re.match("^[1234][0-9][0-9] ", http_error):
+        #    print(f"Status: {http_error}")
+        http_error = html.escape(http_error)
+        error="<p style='color:#FF0000'>An error ({}) occured trying to get <a href='{}'>{}</a>.</p>".format(http_error, url, url)
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
 
     print("Content-Type: text/html")
     if 'Content-Type' in newheaders:
-        msg = EmailMessage()
-        msg['content-type'] = newheaders["Content-Type"]
-        contentType = msg.get_content_type()
-        if 'charset' in msg['content-type'].params:
-            charset = msg['content-type'].params['charset'].lower()
+        charset = newheaders.get_content_charset()
+        if charset:
+            charset = charset.lower()
             #if charset == "iso-8859-1":
             #    options["char_encoding"]='latin1'
 
     for proxy_header in ('Last-Modified', 'Expires'):
-        if copyHeader(lambda header, value: sys.stdout.write("%s: %s" %(header, value)), newheaders, proxy_header):
+        if copyHeader(lambda header, value: sys.stdout.write(f"{header}: {value}"), newheaders, proxy_header):
             print()
     print()
     p = Popen(["/usr/local/bin/htmldiff", refdoc.name, newdoc.name],
@@ -251,7 +340,7 @@ def serveRequest():
     (out, err) = p.communicate()
     p.stdin.close()
     if err:
-        error = "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p><pre>%s</pre>" % (html.escape(err),)
+        error = "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p><pre>{}</pre>".format(html.escape(err),)
         showPage(esc1, esc2, error)
     else:
         # html5lib strips the doctype, so we add it manually
