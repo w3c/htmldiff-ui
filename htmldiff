@@ -216,7 +216,7 @@ def mirrorURL(url, opener):
         response = opener.open(url)
         filename, headers = processResponse(response)
     except urllib.error.HTTPError as error:
-        opener.error = f"HTTP Error: {error.code} {error.reason}"
+        opener.error = f"HTTP error: {error.code} {error.reason}"
     except urllib.error.URLError as error:
         opener.error = f"URL error: {str(error.reason)}"
     except OSError as error:
@@ -266,6 +266,8 @@ def serveRequest():
     checkInputUrl(doc2)
     url_opener2 = setupRequest()
     newdoc, newheaders = mirrorURL(doc2, url_opener2)
+    newerror = url_opener2.error
+
     if 'doc1' in fields:
         doc1 = fields['doc1']
     elif newdoc is not None:
@@ -286,6 +288,7 @@ def serveRequest():
     checkInputUrl(doc1)
     esc1 = html.escape(doc1, True)
     esc2 = html.escape(doc2, True)
+
     urlcomponents1 = urllib.parse.urlparse(doc1)
     urlcomponents2 = urllib.parse.urlparse(doc2)
     # if same domain, we can use the same urlopener
@@ -295,19 +298,27 @@ def serveRequest():
     else:
         url_opener = setupRequest()
 
-    refdoc, refheaders = mirrorURL(doc1, url_opener)
+    # only retrieve refdoc if we were succesful retrieving newdoc
+    if newdoc:
+        refdoc, refheaders = mirrorURL(doc1, url_opener)
+    else:
+        refdoc = refheaders = None
+
     if not (refdoc and newdoc):
         http_error = ""
         url = ""
-        if not refdoc:
+        if not newdoc:
+            http_error = newerror
+            url = esc2
+        else:
             http_error = url_opener.error
             url = esc1
-        else:
-            http_error = url_opener2.error
-            url = esc2
-        if re.match("^[1234][0-9][0-9] ", http_error):
-            print(f"Status: {http_error}")
-        error="<p style='color:#FF0000'>An error {} occured trying to get <a href={}>{}</a>.</p>".format(html.escape(http_error), url, url)
+
+        #@@ review this with pfe.. infinite loop
+        #if re.match("^[1234][0-9][0-9] ", http_error):
+        #    print(f"Status: {http_error}")
+        http_error = html.escape(http_error)
+        error="<p style='color:#FF0000'>An error ({}) occured trying to get <a href='{}'>{}</a>.</p>".format(http_error, url, url)
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
 
     print("Content-Type: text/html")
