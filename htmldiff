@@ -314,9 +314,17 @@ def serveRequest():
             http_error = url_opener.error
             url = esc1
 
-        #@@ review this with pfe.. infinite loop
+        # we used to catch the HTTP code and return it to the user
+        # but this can lead to infinite authentication loops as
+        # this script doesn't handle atm authentication.
+        # Instead, if a request resulted in an HTTP error,
+        # we're going to systematically return 403 so we can
+        # have more useful logs
         #if re.match("^[1234][0-9][0-9] ", http_error):
         #    print(f"Status: {http_error}")
+        if http_error:
+             print(f"Status: 403")
+
         http_error = html.escape(http_error)
         error="<p style='color:#FF0000'>An error ({}) occured trying to get <a href='{}'>{}</a>.</p>".format(http_error, url, url)
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
