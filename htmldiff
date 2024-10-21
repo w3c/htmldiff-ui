@@ -229,11 +229,24 @@ def mirrorURL(url, opener):
         pass                # There's already an error set.
     else:
         atexit.register(rmfile, filename)
-        file = open(filename)
-        if "content-encoding" in headers and headers["content-encoding"] == "gzip":
-            data = StringIO(file.read())
-            file.close()
-            file = gzip.GzipFile(fileobj=data)
+
+        if 'Content-Type' in headers:
+            charset = headers.get_content_charset()
+            if charset:
+                charset = charset.lower()
+        else:
+            charset = None
+
+        if "content-encoding" in headers:
+            if headers["content-encoding"] == "gzip":
+                file = gzip.open(filename, encoding=charset)
+            else:
+                opener.error = f"Unsupported Content Encoding: {headers['content-encoding']}"
+                # would be better to raise an exception...
+                return (None, {})
+        else:
+            file = open(filename, encoding=charset)
+
         file, errors = tidyFile(file)
         if len(errors) == 0:
             return (file, headers)
@@ -330,12 +343,14 @@ def serveRequest():
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
 
     print("Content-Type: text/html")
-    if 'Content-Type' in newheaders:
-        charset = newheaders.get_content_charset()
-        if charset:
-            charset = charset.lower()
-            #if charset == "iso-8859-1":
-            #    options["char_encoding"]='latin1'
+    # JK: commented this block as it doesn't seem to do anything;
+    # delete it after a while
+    # if 'Content-Type' in newheaders:
+    #     charset = newheaders.get_content_charset()
+    #     if charset:
+    #         charset = charset.lower()
+    #         #if charset == "iso-8859-1":
+    #         #    options["char_encoding"]='latin1'
 
     for proxy_header in ('Last-Modified', 'Expires'):
         if copyHeader(lambda header, value: sys.stdout.write(f"{header}: {value}"), newheaders, proxy_header):
