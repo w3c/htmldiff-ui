@@ -213,6 +213,9 @@ def escapeURLQueryString(url=None):
 def mirrorURL(url, opener):
     try:
         url = escapeURLQueryString(url)
+        # temp hack for w3.org urls
+        if url.startswith('http://www.w3.org/'):
+            url = re.sub('^http:', 'https:', url,  count=1)
         response = opener.open(url)
         filename, headers = processResponse(response)
     except urllib.error.HTTPError as error:
