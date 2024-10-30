@@ -24,7 +24,6 @@ from bs4 import BeautifulSoup
 
 import http_auth
 import html5lib
-import surbl
 
 CONTENT_TYPE = "text/html;charset=utf-8"
 
@@ -87,8 +86,6 @@ def validate_url(url):
     return True
 
 def checkInputUrl(url):
-    checker = surbl.SurblChecker('/usr/local/share/surbl/two-level-tlds',
-                                 '/usr/local/etc/surbl.whitelist')
 
     if  url[:5] == 'file:' or len(urllib.parse.urlparse(url)[0])<2:
         print("Status: 403")
@@ -102,12 +99,6 @@ def checkInputUrl(url):
         print()
         url = html.escape(url, True)
         print(f"sorry, I decline to handle this address: {url}")
-        sys.exit()
-    elif checker.isMarkedAsSpam(url):
-        print("Status: 403")
-        print("Content-Type: text/plain; charset=utf-8")
-        print()
-        print("sorry, this URL matches a record known in SURBL. See https://www.surbl.org/")
         sys.exit()
 
 def copyHeader(copy_func, source, key, header_name=None):
