@@ -322,7 +322,12 @@ def serveRequest():
     if urlcomponents2[1] == urlcomponents1[1]:
         url_opener = url_opener2
     else:
-        url_opener = setupRequest()
+        # reuse surblchecker instance and parsed config data
+        # from url_opener2
+        config_parsed = url_opener2.config_parsed
+        surblchecker = url_opener2.surblchecker
+        url_opener = setupRequest(config_parsed=config_parsed,
+                                  surblchecker=surblchecker)
 
     refdoc, refheaders = mirrorURL(doc1, url_opener)
     esc1 = html.escape(doc1, True)
