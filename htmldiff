@@ -112,8 +112,9 @@ def copyHeader(copy_func, source, key, header_name=None):
         rv = True
     return rv
 
-def setupRequest():
-    opener = http_auth.ProtectedURLopener()
+def setupRequest(config_parsed=None, surblchecker=None):
+    opener = http_auth.ProtectedURLopener(config_parsed=config_parsed,
+                                          surblchecker=surblchecker)
     copyHeader(opener.add_header, os.environ,
                'HTTP_IF_MODIFIED_SINCE', 'If-Modified-Since')
     return opener
