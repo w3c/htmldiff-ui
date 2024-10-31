@@ -293,7 +293,7 @@ def serveRequest():
         #    print(f"Status: {http_error}")
         print("Status: 403")
         error = formatErrorMessage(esc2, newerror)
-        showPage(url2=esc2, error=error,
+        showPage(url2=esc2, error_html=error,
                  Content_Type=CONTENT_TYPE)
 
     if 'doc1' in fields:
@@ -312,7 +312,7 @@ def serveRequest():
     if not doc1:
         print("Status: 403")
         error = formatErrorMessage(error="No reference document found")
-        showPage(url2=esc2, error=error, Content_Type=CONTENT_TYPE)
+        showPage(url2=esc2, error_html=error, Content_Type=CONTENT_TYPE)
 
     checkInputUrl(doc1)
 
@@ -371,7 +371,7 @@ def serveRequest():
     if err:
         print("Status: 403")
         error = formatErrorMessage(error=f"An error occured when running <code>htmldiff</code> on the documents:</p><pre>{html.escape(err)}</pre>")
-        showPage(esc1, esc2, error)
+        showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
     else:
         # html5lib strips the doctype, so we add it manually
         # cf https://github.com/w3c/htmldiff-ui/issues/4#issuecomment-642831382
