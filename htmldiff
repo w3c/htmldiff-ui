@@ -18,14 +18,12 @@ import tempfile
 import urllib.parse
 import urllib.error
 import gzip
-from io import StringIO
 from subprocess import Popen, PIPE
 import http.client
 from bs4 import BeautifulSoup
 
 import http_auth
 import html5lib
-import surbl
 
 CONTENT_TYPE = "text/html;charset=utf-8"
 
@@ -88,8 +86,6 @@ def validate_url(url):
     return True
 
 def checkInputUrl(url):
-    checker = surbl.SurblChecker('/usr/local/share/surbl/two-level-tlds',
-                                 '/usr/local/etc/surbl.whitelist')
 
     if  url[:5] == 'file:' or len(urllib.parse.urlparse(url)[0])<2:
         print("Status: 403")
@@ -104,12 +100,6 @@ def checkInputUrl(url):
         url = html.escape(url, True)
         print(f"sorry, I decline to handle this address: {url}")
         sys.exit()
-    elif checker.isMarkedAsSpam(url):
-        print("Status: 403")
-        print("Content-Type: text/plain; charset=utf-8")
-        print()
-        print("sorry, this URL matches a record known in SURBL. See https://www.surbl.org/")
-        sys.exit()
 
 def copyHeader(copy_func, source, key, header_name=None):
     rv = False
@@ -122,8 +112,9 @@ def copyHeader(copy_func, source, key, header_name=None):
         rv = True
     return rv
 
-def setupRequest():
-    opener = http_auth.ProtectedURLopener()
+def setupRequest(config_parsed=None, surblchecker=None):
+    opener = http_auth.ProtectedURLopener(config_parsed=config_parsed,
+                                          surblchecker=surblchecker)
     copyHeader(opener.add_header, os.environ,
                'HTTP_IF_MODIFIED_SINCE', 'If-Modified-Since')
     return opener
@@ -198,12 +189,22 @@ def escapeURLQueryString(url=None):
     if url is None:
         return None
 
+    unsplit = False
+
     url_split = urllib.parse.urlsplit(url)
 
     if url_split.query:
         fields = dict(urllib.parse.parse_qsl(url_split.query))
         escaped_qs = urllib.parse.urlencode(fields)
         url_split = url_split._replace(query=escaped_qs)
+        unsplit = True
+
+    if url_split.path and not url_split.path.isascii():
+        escaped_path = urllib.parse.quote(url_split.path)
+        url_split = url_split._replace(path=escaped_path)
+        unsplit = True
+
+    if unsplit:
         rv = urllib.parse.urlunsplit(url_split)
     else:
         rv = url
@@ -263,6 +264,17 @@ def showPage(url1='', url2='', error_html='', **headers):
     print(Page2 % (url1, url2))
     sys.exit()
 
+def formatErrorMessage(url='', error=''):
+    if error:
+        error = html.escape(error)
+
+    if url:
+        error_msg = f"<p style='color:#FF0000'>An error ({error}) occured trying to get <a href='{url}'>{url}</a>.</p>"
+    else:
+        error_msg = f"<p style='color:#FF0000'>An error ({error}) occured.</p>"
+
+    return error_msg
+
 def serveRequest():
 
     environ = os.environ
@@ -274,16 +286,29 @@ def serveRequest():
                                          max_num_fields = 2))
     if 'doc2' not in fields:
         showPage(Content_Type=CONTENT_TYPE)
-    # if doc1 is not specified, we load doc2 to check if it has a previous version link
+
+    # doc1 is not mandatory; we always load doc2 first. If doc1 is not specified,
+    # we check if doc2 has a previous version link and use that for doc1
     doc2 = fields['doc2']
     checkInputUrl(doc2)
+
     url_opener2 = setupRequest()
     newdoc, newheaders = mirrorURL(doc2, url_opener2)
-    newerror = url_opener2.error
+    esc2 = html.escape(doc2, True)
+
+    if not newdoc:
+        newerror = url_opener2.error
+        # see note below in error for refdoc
+        #if re.match("^[1234][0-9][0-9] ", http_error):
+        #    print(f"Status: {http_error}")
+        print("Status: 403")
+        error = formatErrorMessage(esc2, newerror)
+        showPage(url2=esc2, error_html=error,
+                 Content_Type=CONTENT_TYPE)
 
     if 'doc1' in fields:
         doc1 = fields['doc1']
-    elif newdoc is not None:
+    else:
         soup = BeautifulSoup(newdoc.read(), "html.parser")
         newdoc.seek(0)
         try:
@@ -293,14 +318,13 @@ def serveRequest():
                 doc1 = soup.find(name=["a", "link"], attrs={"href":True, rel:matchPredecessorRel})["href"]
             except:
                 doc1 = None
-    else:
-        doc1 = None
+
     if not doc1:
-        showPage(Content_Type=CONTENT_TYPE)
+        print("Status: 403")
+        error = formatErrorMessage(error="No reference document found")
+        showPage(url2=esc2, error_html=error, Content_Type=CONTENT_TYPE)
 
     checkInputUrl(doc1)
-    esc1 = html.escape(doc1, True)
-    esc2 = html.escape(doc2, True)
 
     urlcomponents1 = urllib.parse.urlparse(doc1)
     urlcomponents2 = urllib.parse.urlparse(doc2)
@@ -309,23 +333,18 @@ def serveRequest():
     if urlcomponents2[1] == urlcomponents1[1]:
         url_opener = url_opener2
     else:
-        url_opener = setupRequest()
+        # reuse surblchecker instance and parsed config data
+        # from url_opener2
+        config_parsed = url_opener2.config_parsed
+        surblchecker = url_opener2.surblchecker
+        url_opener = setupRequest(config_parsed=config_parsed,
+                                  surblchecker=surblchecker)
 
-    # only retrieve refdoc if we were succesful retrieving newdoc
-    if newdoc:
-        refdoc, refheaders = mirrorURL(doc1, url_opener)
-    else:
-        refdoc = refheaders = None
+    refdoc, refheaders = mirrorURL(doc1, url_opener)
+    esc1 = html.escape(doc1, True)
 
-    if not (refdoc and newdoc):
-        http_error = ""
-        url = ""
-        if not newdoc:
-            http_error = newerror
-            url = esc2
-        else:
-            http_error = url_opener.error
-            url = esc1
+    if not refdoc:
+        error = url_opener.error
 
         # we used to catch the HTTP code and return it to the user
         # but this can lead to infinite authentication loops as
@@ -335,11 +354,8 @@ def serveRequest():
         # have more useful logs
         #if re.match("^[1234][0-9][0-9] ", http_error):
         #    print(f"Status: {http_error}")
-        if http_error:
-             print(f"Status: 403")
-
-        http_error = html.escape(http_error)
-        error="<p style='color:#FF0000'>An error ({}) occured trying to get <a href='{}'>{}</a>.</p>".format(http_error, url, url)
+        print("Status: 403")
+        error = formatErrorMessage(esc1, error)
         showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
 
     print("Content-Type: text/html")
@@ -363,13 +379,15 @@ def serveRequest():
     (out, err) = p.communicate()
     p.stdin.close()
     if err:
-        error = "<p style='color:#FF0000'>An error occured when running <code>htmldiff</code> on the documents:</p><pre>{}</pre>".format(html.escape(err),)
-        showPage(esc1, esc2, error)
+        print("Status: 403")
+        error = formatErrorMessage(error=f"An error occured when running <code>htmldiff</code> on the documents:</p><pre>{html.escape(err)}</pre>")
+        showPage(esc1, esc2, error, Content_Type=CONTENT_TYPE)
     else:
         # html5lib strips the doctype, so we add it manually
         # cf https://github.com/w3c/htmldiff-ui/issues/4#issuecomment-642831382
         print("<!doctype html>")
         print(out.decode("utf-8"))
+
 if __name__ == '__main__':
     if 'SCRIPT_NAME' in os.environ:
         serveRequest()
