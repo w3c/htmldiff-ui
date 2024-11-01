@@ -189,12 +189,22 @@ def escapeURLQueryString(url=None):
     if url is None:
         return None
 
+    unsplit = False
+
     url_split = urllib.parse.urlsplit(url)
 
     if url_split.query:
         fields = dict(urllib.parse.parse_qsl(url_split.query))
         escaped_qs = urllib.parse.urlencode(fields)
         url_split = url_split._replace(query=escaped_qs)
+        unsplit = True
+
+    if url_split.path and not url_split.path.isascii():
+        escaped_path = urllib.parse.quote(url_split.path)
+        url_split = url_split._replace(path=escaped_path)
+        unsplit = True
+
+    if unsplit:
         rv = urllib.parse.urlunsplit(url_split)
     else:
         rv = url
