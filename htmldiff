@@ -383,9 +383,9 @@ def serveRequest():
     base = urlcomponents2.scheme + "://" + urlcomponents2.netloc
     if re.search(r'<base', res, flags=re.IGNORECASE) == None:
         if re.search(r'<head', res, flags=re.IGNORECASE):
-            res = re.sub(r'<head([^>]*)>', r'<head\1><base href="' + base + '">', res, flags=re.IGNORECASE)
+            res = re.sub(r'<head([^>]*)>', r'<head\1>' + '\n<base href="' + base + '">', res, flags=re.IGNORECASE)
         else:
-            res = re.sub(r'<html([^>]*)>', r'<html\1><base href="' + base + '">', res, flags=re.IGNORECASE)
+            res = re.sub(r'<html([^>]*)>', r'<html\1>' + '\n<base href="' + base + '">', res, flags=re.IGNORECASE)
 
     if err:
         print("Status: 403")
