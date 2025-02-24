@@ -378,15 +378,6 @@ def serveRequest():
     sys.stderr.flush()
     (out, err) = p.communicate()
     p.stdin.close()
-
-    res = out.decode("utf-8")
-    base = urlcomponents2.scheme + "://" + urlcomponents2.netloc
-    if re.search("<base", res, flags=re.IGNORECASE) == None:
-        if re.search("<head", res, flags=re.IGNORECASE):
-            res = re.sub("<head([^>]*)>", "<head\1><base href=\"" + base + "\">", res, flags=re.IGNORECASE)
-        else:
-            res = re.sub("<html([^>]*)>", "<html\1><base href=\"" + base + "\">", res, flags=re.IGNORECASE)
-
     if err:
         print("Status: 403")
         error = formatErrorMessage(error=f"An error occured when running <code>htmldiff</code> on the documents:</p><pre>{html.escape(err)}</pre>")
@@ -395,7 +386,7 @@ def serveRequest():
         # html5lib strips the doctype, so we add it manually
         # cf https://github.com/w3c/htmldiff-ui/issues/4#issuecomment-642831382
         print("<!doctype html>")
-        print(res)
+        print(out.decode("utf-8"))
 
 if __name__ == '__main__':
     if 'SCRIPT_NAME' in os.environ:
