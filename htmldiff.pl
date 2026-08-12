@@ -276,18 +276,20 @@ sub markit {
 					$_ = "";
 				}
 			} else {
-				if (m/.+/) {
+				# $_ has some content worth holding onto if it contains
+				# at least one non-newline character. Use tr// to count
+				# newlines without invoking the regex engine or modifying $_.
+				if (length($_) > ($_ =~ tr/\n//)) {
 					$temp .= $_;
 					$_ = "";
 				}
 			}
 		}
 
-		s/\001//g;
-		s/\002//g;
-		s/\003//g;
-		s/\004//g;
-		if ($_ !~ m/^$/) {
+		# Strip the four control-character markers.
+		$_ =~ tr/\001\002\003\004//d;
+		# Keep $_ unless it's empty or just a lone trailing newline.
+		if ($_ ne "" && $_ ne "\n") {
 			$retval .= $_;
 		}
 		$diffcounter++;
@@ -416,9 +418,6 @@ function setOldDisplay() {
 			} else {
 				my @list = split(' ');
 				foreach $element (@list) {
-					if ($element =~ m/\<H[1-6]/i) {
-#						$inheader = 1;
-					}
 					if ($inheader == 0) {
 						$element =~ s/</\n</g;
 						$element =~ s/^\n//;
@@ -430,8 +429,8 @@ function setOldDisplay() {
 						$inheader = 0;
 					}
 					$retval .= "$element";
-					$inelement += ($element =~ s/</&lt;/g);
-					$inelement -= ($element =~ s/>/&gt;/g);
+					$inelement += ($element =~ tr/<//);
+					$inelement -= ($element =~ tr/>//);
 					if ($inelement < 0) {
 						$inelement = 0;
 					}
