@@ -23,7 +23,8 @@ import http.client
 from bs4 import BeautifulSoup
 
 import http_auth
-import html5lib
+import html5_parser
+import lxml.etree as etree
 
 CONTENT_TYPE = "text/html;charset=utf-8"
 
@@ -161,17 +162,13 @@ def checkResponseIsHTML(response):
 
 def tidyFile(file):
     file.seek(0)
-    doc = html5lib.parse(file.read())
+    root = html5_parser.parse(file.read(), treebuilder="lxml")
     file.close()
+    prettyhtml = etree.tostring(root, method="html", encoding="unicode")
     file = tempfile.NamedTemporaryFile(
         mode='w+', prefix='htmldiff-', suffix='.html')
     atexit.register(file.close)
-    walker = html5lib.getTreeWalker("etree")
-    stream = walker(doc)
-    s = html5lib.serializer.HTMLSerializer()
-    prettyhtml = s.serialize(stream)
-    for item in prettyhtml:
-        file.write(item)
+    file.write(prettyhtml)
     file.flush()
     file.seek(0)
     return (file, [])
