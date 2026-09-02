@@ -5,7 +5,7 @@
 # Copyright (c) 1998-2006 MACS, Inc.
 #
 # Copyright (c) 2007 SiSco, Inc.
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
@@ -13,10 +13,10 @@
 # distribute, sublicense, and/or sell copies of the Software, and to
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -191,7 +191,7 @@ sub markit {
 	$span[2]="<del class=\"diff-old\">";
 	$span[3]="<ins class=\"diff-new\">";
 	$span[4]="<ins class=\"diff-chg\">";
-	
+
 	my @diffEnd ;
 	$diffEnd[1] = '</del>';
 	$diffEnd[2] = '</del>';
@@ -208,7 +208,7 @@ sub markit {
 	my $temp = "";
 	my $lineCount = 0;
 
-# strategy: 
+# strategy:
 #
 # process the output of diff...
 #
@@ -228,7 +228,7 @@ sub markit {
 		my $anchor = $opt_l ? qq[<a tabindex="$diffcounter">] : "" ;
 		my $anchorEnd = $opt_l ? q[</a>] : "" ;
 		$lineCount ++;
-		if ($state == 0) {	# if we are resting and we find a marker, 
+		if ($state == 0) {	# if we are resting and we find a marker,
 							# then we must be entering a block
 			if (m/^([\001-\004])/) {
 				$state = ord($1);
@@ -313,7 +313,7 @@ sub splitit {
 	my $preformatted=0;
 	my $inelement=0;
 	my $retval = "";
-	my $styles = q(<style type='text/css'>
+	my $styles = q(<style>
 :root {
 	--diff-old-bg: #fbb;
 	--diff-chg-bg: #bfb;
@@ -327,39 +327,166 @@ sub splitit {
 }}
 
 .diff-new { background-color: var(--diff-new-bg); }
-.diff-new:before, .diff-new:after { content: "\2191" }
+.diff-new.diff-group-start::before { content: "(new) " }
 .diff-chg { background-color: var(--diff-chg-bg); }
-.diff-chg:before, .diff-chg:after { content: "\2195" }
+.diff-chg.diff-group-start::before { content: "(new) " }
 .diff-old { text-decoration: line-through; background-color: var(--diff-old-bg); }
-.diff-old:before, .diff-old:after { content: "\2193" }
+.diff-old.diff-group-start::before { content: "(old) " }
+:is(.diff-new, .diff-chg, .diff-old).diff-group-end::after { content: "(end) "; }
+
+.diff-group-start::before { position: absolute; font-size: 50%; background-color: inherit; line-height: 1; white-space: normal; margin-top: -0.7em; border-radius: 0.25em / 0.5em; }
+.diff-group-end::after { position:absolute; width: 0; overflow: hidden; }
+
+.hide-diff-old .diff-old { display: none; }
+.hide-diff-markers :is(.diff-new, .diff-chg, .diff-old).diff-group-start::before,
+.hide-diff-markers :is(.diff-new, .diff-chg, .diff-old).diff-group-end::after { content: none; }
 </style>
+<script>
+
+/**
+ * Group adjacent diff <ins>/<del> that are "next to each other" in inline flow,
+ * even if split by inline wrappers.
+ *
+ * Boundary rule (no computed styles):
+ * - Only the following elements are treated as inline/transparent wrappers:
+ *   img, span, a, code, var, i, em, strong, c-, dfn, cite, mark, b, sup, sub,
+ *   samp, iframe, li, kbd, bdo, small, br, q
+ * - Any other element between two diff nodes breaks adjacency.
+ * - Any non-whitespace text node between two diff nodes breaks adjacency.
+ *
+ * Marks each member with data-diff-group, plus:
+ * - .diff-group-start on first
+ * - .diff-group-end on last
+ */
+function groupInlineDiffsSimple(root = document) {
+  const DIFF_SEL = 'ins.diff-new, ins.diff-chg, del.diff-old, ins.diff-old, del.diff-new, del.diff-chg';
+
+  // Inline/transparent tag allowlist.
+  const INLINE_TAGS = new Set([
+    'IMG', 'SPAN', 'A', 'C-', 'CODE', 'VAR', 'I', 'EM', 'STRONG', 'DFN', 'CITE',
+    'MARK', 'B', 'SUP', 'SUB', 'SAMP', 'KBD', 'BDO', 'SMALL', 'BR', 'Q'
+  ]);
+
+  const isInlineElement = (el) => {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+    const tn = el.tagName;
+    return INLINE_TAGS.has(tn);
+  };
+
+  const isWhitespaceText = (n) => n.nodeType === Node.TEXT_NODE && !/\S/.test(n.nodeValue || '');
+
+  const isDiffEl = (n) =>
+    n?.nodeType === Node.ELEMENT_NODE &&
+    n.matches('ins.diff-new, ins.diff-chg, del.diff-old');
+
+  const diffKey = (el) => {
+    const cls = el.classList.contains('diff-new') ? 'diff-new'
+            : el.classList.contains('diff-chg') ? 'diff-chg'
+            : el.classList.contains('diff-old') ? 'diff-old'
+            : 'diff';
+    return `${el.tagName}|${cls}`;
+  };
+
+  const diffs = Array.from(root.querySelectorAll(DIFF_SEL));
+  if (!diffs.length) return [];
+
+  // Reset if re-run
+  for (const el of diffs) {
+    el.classList.remove('diff-group-start', 'diff-group-end');
+    el.removeAttribute('data-diff-group');
+  }
+
+  const stopRoot = root instanceof Document ? root.documentElement : root;
+
+  const nextNode = (node) => {
+    if (node.firstChild) return node.firstChild;
+    while (node && node !== stopRoot) {
+      if (node.nextSibling) return node.nextSibling;
+      node = node.parentNode;
+    }
+    return null;
+  };
+
+  const nextAfterSubtree = (node) => {
+    while (node && node !== stopRoot) {
+      if (node.nextSibling) return node.nextSibling;
+      node = node.parentNode;
+    }
+    return null;
+  };
+
+  // True iff b is the next significant diff after a, with only inline wrappers
+  // and whitespace between them.
+  const adjacent = (a, b) => {
+    let n = nextAfterSubtree(a);
+    while (n) {
+      if (n === b) return true;
+
+      if (n.nodeType === Node.TEXT_NODE) {
+        if (!isWhitespaceText(n)) return false;
+      } else if (n.nodeType === Node.ELEMENT_NODE) {
+        if (isDiffEl(n)) return false;            // another diff blocks
+        if (!isInlineElement(n)) return false;    // boundary element blocks
+
+        // If this inline element contains b, descend into it to see what comes first.
+        if (n.contains(b)) {
+          n = n.firstChild;
+          continue;
+        }
+      }
+
+      n = nextNode(n);
+    }
+    return false;
+  };
+
+  const groups = [];
+  let current = [];
+  let groupId = 0;
+
+  const commit = () => {
+    if (!current.length) return;
+    const id = String(++groupId);
+    current.forEach((el) => el.setAttribute('data-diff-group', id));
+    current[0].classList.add('diff-group-start');
+    current[current.length - 1].classList.add('diff-group-end');
+    groups.push(current);
+    current = [];
+  };
+
+  let prev = null;
+  let prevKey = '';
+
+  for (const el of diffs) {
+    const key = diffKey(el);
+
+    if (prev && key === prevKey && adjacent(prev, el)) {
+      current.push(el);
+    } else {
+      commit();
+      current.push(el);
+    }
+
+    prev = el;
+    prevKey = key;
+  }
+  commit();
+
+  return groups;
+}
+
+document.addEventListener('DOMContentLoaded', () => groupInlineDiffsSimple());
+</script>
 <script src="https://w3c.github.io/htmldiff-nav/index.js"></script>);
 	if ($opt_t) {
 		$styles .= q(
-<script type="text/javascript">
-<!--
-function setOldDisplay() {
-	for ( var s = 0; s < document.styleSheets.length; s++ ) {
-		var css = document.styleSheets[s];
-		var mydata ;
-		try { mydata = css.cssRules ;
-		if ( ! mydata ) mydata = css.rules;
-		for ( var r = 0; r < mydata.length; r++ ) {
-			if ( mydata[r].selectorText == '.diff-old' ) {
-				mydata[r].style.display = ( mydata[r].style.display == '' ) ? 'none'
-: '';
-				return;
-			}
-		} 
-		} catch(e) {} ;
-	}
-}
--->
-</script>
+<style>
+	.diff-old { display: none; }
+</style>
 );
 
 	}
-	
+
 	if ($stripheader) {
 		open(HEADER, ">$headertmp");
 	}
