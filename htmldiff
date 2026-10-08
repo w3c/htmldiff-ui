@@ -125,9 +125,10 @@ def processResponse(response):
     Extracts the headers and body returned by a succesful
     DirectorOpener HTTP GET request.
 
-    Stores the body into a temporary file and returns the file and headers.
+    Stores the body into a temporary file and returns the file, headers
+    and final URL (after redirects).
     Caller must delete the temporary file.
-    If there's no response object, returns a (None, {}) tuple.
+    If there's no response object, returns a (None, {}, None) tuple.
     """
     if response:
 
@@ -140,10 +141,10 @@ def processResponse(response):
         shutil.copyfileobj(response, tfp)
         tfp.close()
 
-        return (filename, response.headers)
+        return (filename, response.headers, response.geturl())
 
     else:
-        return (None, {})
+        return (None, {}, None)
 
 def checkResponseIsHTML(response):
     """
@@ -160,10 +161,29 @@ def checkResponseIsHTML(response):
 
     return rv
 
-def tidyFile(file):
+def absolutizeLinks(root, base_url):
+    """
+    Makes relative links absolute against base_url so they keep working
+    once the diff is served from this service's own URL.
+    Fragment-only links are kept as is so in-page navigation stays
+    within the diff.
+    """
+    def resolve(link):
+        if link.startswith('#'):
+            return link
+        try:
+            return urllib.parse.urljoin(base_url, link)
+        except ValueError:
+            return link
+
+    # resolve_base_href honours (then removes) a <base> already in the document
+    root.rewrite_links(resolve, resolve_base_href=True)
+
+def tidyFile(file, base_url):
     file.seek(0)
-    root = html5_parser.parse(file.read(), treebuilder="lxml")
+    root = html5_parser.parse(file.read(), treebuilder="lxml_html")
     file.close()
+    absolutizeLinks(root, base_url)
     prettyhtml = etree.tostring(root, method="html", encoding="unicode")
     file = tempfile.NamedTemporaryFile(
         mode='w+', prefix='htmldiff-', suffix='.html')
@@ -208,11 +228,11 @@ def escapeURLQueryString(url=None):
 
     return rv
 
-def mirrorURL(url, opener):
+def mirrorURL(url, opener, base_url=None):
     try:
         url = escapeURLQueryString(url)
         response = opener.open(url)
-        filename, headers = processResponse(response)
+        filename, headers, final_url = processResponse(response)
     except urllib.error.HTTPError as error:
         opener.error = f"HTTP error: {error.code} {error.reason}"
     except urllib.error.URLError as error:
@@ -241,16 +261,16 @@ def mirrorURL(url, opener):
             else:
                 opener.error = f"Unsupported Content Encoding: {headers['content-encoding']}"
                 # would be better to raise an exception...
-                return (None, {})
+                return (None, {}, None)
         else:
             file = open(filename, encoding=charset)
 
-        file, errors = tidyFile(file)
+        file, errors = tidyFile(file, base_url or final_url)
         if len(errors) == 0:
-            return (file, headers)
+            return (file, headers, final_url)
         else:
             opener.error = "Tidy errors: %s" % (str(errors))
-    return (None, {})
+    return (None, {}, None)
 
 def showPage(url1='', url2='', error_html='', **headers):
     for name, value in list(headers.items()):
@@ -290,7 +310,7 @@ def serveRequest():
     checkInputUrl(doc2)
 
     url_opener2 = setupRequest()
-    newdoc, newheaders = mirrorURL(doc2, url_opener2)
+    newdoc, newheaders, newdoc_url = mirrorURL(doc2, url_opener2)
     esc2 = html.escape(doc2, True)
 
     if not newdoc:
@@ -337,7 +357,10 @@ def serveRequest():
         url_opener = setupRequest(config_parsed=config_parsed,
                                   surblchecker=surblchecker)
 
-    refdoc, refheaders = mirrorURL(doc1, url_opener)
+    # Only doc2's markup ends up in the diff output (htmldiff.pl strips
+    # markup from old blocks), so doc1's links are resolved against doc2's
+    # URL too: this keeps unchanged markup lines identical for diff.
+    refdoc, refheaders, _ = mirrorURL(doc1, url_opener, base_url=newdoc_url)
     esc1 = html.escape(doc1, True)
 
     if not refdoc:
